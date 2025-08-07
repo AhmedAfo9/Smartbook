@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مترجم احترافي</title>
+    
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Libraries for EPUB conversion -->
+    <script src="https://cdn.jsdelivr.net/npm/jszip@3.1.5/dist/jszip.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/epubjs@0.3.93/dist/epub.min.js"></script>
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap');
+        html, body {
+            height: 100%; height: 100dvh;
+            font-family: 'Tajawal', sans-serif;
+            overscroll-behavior: none;
+        }
+        #text-container::-webkit-scrollbar { width: 8px; }
+        #text-container::-webkit-scrollbar-track { background: #f1f5f9; }
+        #text-container::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 10px; }
+        [contenteditable]:empty:before {
+            content: attr(placeholder);
+            pointer-events: none;
+            display: block;
+            color: #9ca3af;
+        }
+        .fade-in { animation: fadeIn 0.3s ease-in-out; }
+        .slide-up { animation: slideUp 0.3s ease-in-out; }
+        .slide-down { animation: slideDown 0.3s ease-in-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        @keyframes slideDown { from { transform: translateY(0); } to { transform: translateY(100%); } }
+        .correct-answer { background-color: #10B981 !important; color: white !important; transform: scale(1.05); }
+        .wrong-answer { background-color: #EF4444 !important; color: white !important; }
+        .quiz-choice-btn { transition: all 0.2s ease-in-out; }
+        
+        /* Splash Screen Styles */
+        #splash-screen {
+            position: fixed;
+            inset: 0;
+            z-index: 200;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #0c0a09; /* Fallback color */
+            background-image: linear-gradient(45deg, rgba(2,0,36,1) 0%, rgba(9,9,121,0.5) 35%, rgba(0,212,255,0.2) 100%),
+                              linear-gradient(135deg, #020617, #1e293b);
+            color: white;
+            transition: opacity 1.5s ease-out, visibility 1.5s ease-out;
+        }
+        #splash-screen.hidden {
+            opacity: 0;
+            visibility: hidden;
+        }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 w-screen overflow-hidden flex flex-col">
+
+    <!-- Splash Screen -->
+    <div id="splash-screen">
+        <h1 class="text-4xl font-bold animate-pulse">By Ahmed Falah</h1>
+    </div>
+
+    <!-- ===== Top Toolbar ===== -->
+    <header class="relative bg-white shadow-md z-30 flex-shrink-0">
+        <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+            <div id="auth-container">
+                <!-- Auth state will be rendered here -->
+            </div>
+            <button id="tools-toggle-btn" class="flex items-center gap-2 text-lg font-semibold p-2 rounded-lg hover:bg-slate-100 transition-opacity">
+                <span>الأدوات</span>
+                <svg id="tools-arrow" class="w-5 h-5 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+            </button>
+        </div>
+        <div id="tools-menu" class="hidden absolute top-full right-0 left-0 bg-white/95 backdrop-blur-sm border-t p-4">
+             <div class="grid grid-cols-3 gap-3 text-center">
+                <a href="#" class="tool-item group" data-tool="translate-words"><div class="p-3 bg-slate-100 rounded-lg group-hover:bg-sky-100"><svg class="w-7 h-7 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7L8.5 4M10 7L11.5 4M10 7v5m-3-2h6"></path></svg></div><span class="mt-2 block text-xs font-medium">ترجمة الكلمات</span></a>
+                <a href="#" class="tool-item group" data-tool="translate-paragraphs"><div class="p-3 bg-slate-100 rounded-lg group-hover:bg-sky-100"><svg class="w-7 h-7 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg></div><span class="mt-2 block text-xs font-medium">ترجمة الفقرات</span></a>
+                <a href="#" class="tool-item group" data-tool="saved-words"><div class="p-3 bg-slate-100 rounded-lg group-hover:bg-sky-100"><svg class="w-7 h-7 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"></path></svg></div><span class="mt-2 block text-xs font-medium">الكلمات المضافة</span></a>
+                <a href="#" class="tool-item group" data-tool="read-files"><div class="p-3 bg-slate-100 rounded-lg group-hover:bg-sky-100"><svg class="w-7 h-7 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25"/></svg></div><span class="mt-2 block text-xs font-medium">المقروء</span></a>
+                <label for="txt-importer" class="tool-item group cursor-pointer" data-tool="txt-importer"><div class="p-3 bg-slate-100 rounded-lg group-hover:bg-sky-100"><svg class="w-7 h-7 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg></div><span class="mt-2 block text-xs font-medium">استيراد TXT</span><input type="file" id="txt-importer" class="hidden" accept=".txt,text/plain"></label>
+                <a href="#" class="tool-item group" data-tool="epub-converter"><div class="p-3 bg-slate-100 rounded-lg group-hover:bg-sky-100"><svg class="w-7 h-7 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h5M4 12v5h5M15 4v5h5M15 12v5h5"></path></svg></div><span class="mt-2 block text-xs font-medium">تحويل EPUB</span></a>
+                <a href="#" class="tool-item group" data-tool="quiz"><div class="p-3 bg-slate-100 rounded-lg group-hover:bg-sky-100"><svg class="w-7 h-7 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.085a2 2 0 00-1.736.97l-1.9 3.8a2 2 0 00.23 2.16l3.5 3.5m7-10l-3.5 7"></path></svg></div><span class="mt-2 block text-xs font-medium">اختبار الكلمات</span></a>
+            </div>
+        </div>
+    </header>
+
+    <!-- ===== Main Content Area ===== -->
+    <main id="main-content" class="flex-1 flex flex-col overflow-hidden p-4">
+        <div id="text-container" contenteditable="true" spellcheck="false" placeholder="قم بتسجيل الدخول للبدء..."
+            class="flex-1 bg-white rounded-xl shadow-inner p-6 text-lg leading-relaxed overflow-y-auto focus:outline-none focus:ring-2 focus:ring-sky-400"
+            dir="rtl" style="text-align: right;">
+        </div>
+    </main>
+    
+    <!-- ===== Modals and Popups ===== -->
+    <div id="word-popup" class="hidden fixed bottom-0 left-0 right-0 bg-white p-5 shadow-[0_-4px_15px_rgba(0,0,0,0.1)] rounded-t-2xl z-40"></div>
+    <div id="saved-words-modal" class="hidden fixed inset-0 bg-black bg-opacity-40 z-50 flex items-center justify-center p-4"></div>
+    <div id="read-files-modal" class="hidden fixed inset-0 bg-black bg-opacity-40 z-50 flex items-center justify-center p-4"></div>
+    <div id="epub-converter-modal" class="hidden fixed inset-0 bg-black bg-opacity-40 z-50 flex items-center justify-center p-4"></div>
+    <div id="quiz-modal" class="hidden fixed inset-0 bg-slate-100 z-50 flex flex-col p-4"></div>
+    <div id="loader" class="hidden fixed inset-0 bg-black bg-opacity-20 z-[100] flex items-center justify-center"><div class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-sky-500"></div></div>
+    <div id="toast" class="hidden fixed bottom-24 left-1/2 -translate-x-1/2 bg-slate-800 text-white py-2 px-5 rounded-full shadow-lg z-[101]"></div>
+
+    <script>
+    window.onload = () => {
+        // --- FIREBASE CONFIG ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyD0R4zxahJVgm-NBMvL74_uJ3YNG0XqKLg",
+            authDomain: "smartbook-99636.firebaseapp.com",
+            projectId: "smartbook-99636",
+            storageBucket: "smartbook-99636.firebasestorage.app",
+            messagingSenderId: "240681472592",
+            appId: "1:240681472592:web:d297bfa696011a1ae4b755"
+        };
+
+        // --- FIREBASE INITIALIZATION ---
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        // --- STATE & DOM ---
+        let state = {
+            originalText: "",
+            translatedText: "",
+            currentLang: 'ar',
+            activeTool: null,
+            isToolsMenuOpen: false,
+            currentUser: null,
+            currentReadFileId: null,
+        };
+        const dom = {
+            textContainer: document.getElementById('text-container'),
+            toolsToggleBtn: document.getElementById('tools-toggle-btn'),
+            toolsArrow: document.getElementById('tools-arrow'),
+            toolsMenu: document.getElementById('tools-menu'),
+            toolItems: document.querySelectorAll('.tool-item'),
+            loader: document.getElementById('loader'),
+            toast: document.getElementById('toast'),
+            txtImporter: document.getElementById('txt-importer'),
+            authContainer: document.getElementById('auth-container'),
+            splashScreen: document.getElementById('splash-screen'),
+        };
+
+        // --- HELPERS ---
+        const showToast = (message) => { dom.toast.textContent = message; dom.toast.classList.remove('hidden'); setTimeout(() => dom.toast.classList.add('hidden'), 3000); };
+        const showLoader = () => dom.loader.classList.remove('hidden');
+        const hideLoader = () => dom.loader.classList.add('hidden');
+        const getPosColor = (pos = 'unknown') => ({'noun':'bg-green-100 text-green-800','verb':'bg-blue-100 text-blue-800','adjective':'bg-yellow-100 text-yellow-800','adverb':'bg-purple-100 text-purple-800'}[pos] || 'bg-slate-100 text-slate-800');
+        const shuffleArray = (array) => array.sort(() => Math.random() - 0.5);
+        const detectLanguage = (text) => /[\u0600-\u06FF]/.test(text) ? 'ar' : 'en';
+        const debounce = (func, delay) => { let timeout; return (...args) => { clearTimeout(timeout); timeout = setTimeout(() => func(...args), delay); }; };
+
+        // --- TRANSLATION API ---
+        async function translateText(text, targetLang, sourceLang) {
+            if (!text || !text.trim()) return '';
+            showLoader();
+            try {
+                const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${sourceLang}|${targetLang}`;
+                const response = await fetch(url);
+                if (!response.ok) throw new Error('Network error');
+                const data = await response.json();
+                return data.responseData.translatedText || text;
+            } catch (error) { showToast('حدث خطأ في الترجمة'); console.error(error); return text;
+            } finally { hideLoader(); }
+        }
+        
+        // --- CORE RENDER & UI ---
+        function render() {
+            dom.textContainer.dir = state.currentLang === 'ar' ? 'rtl' : 'ltr';
+            dom.textContainer.style.textAlign = state.currentLang === 'ar' ? 'right' : 'left';
+            
+            const textToShow = state.currentLang === 'ar' ? state.originalText : state.translatedText;
+
+            if (state.activeTool) {
+                renderToolState();
+            } else {
+                dom.textContainer.contentEditable = true;
+                if (dom.textContainer.innerText !== textToShow) {
+                    dom.textContainer.innerText = textToShow;
+                }
+            }
+        }
+        
+        function renderText(text) {
+            const detectedLang = detectLanguage(text);
+            state.currentLang = detectedLang;
+
+            if (detectedLang === 'ar') {
+                state.originalText = text;
+                state.translatedText = ""; 
+            } else {
+                state.originalText = "";
+                state.translatedText = text;
+            }
+            
+            state.activeTool = null;
+            
+            dom.textContainer.innerText = text;
+            dom.textContainer.dir = state.currentLang === 'ar' ? 'rtl' : 'ltr';
+            dom.textContainer.style.textAlign = state.currentLang === 'ar' ? 'right' : 'left';
+            
+            dom.toolItems.forEach(item => {
+                item.querySelector('div')?.classList.remove('bg-sky-200');
+            });
+        }
+
+        // --- AUTHENTICATION ---
+        function renderAuthState() {
+            if (state.currentUser) {
+                dom.authContainer.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <img src="${state.currentUser.photoURL}" alt="user" class="w-10 h-10 rounded-full">
+                        <div>
+                            <span class="font-semibold text-sm">${state.currentUser.displayName}</span>
+                            <button id="logout-btn" class="block text-xs text-red-500 hover:underline">تسجيل الخروج</button>
+                        </div>
+                    </div>`;
+                dom.authContainer.querySelector('#logout-btn').onclick = () => auth.signOut();
+                dom.toolsToggleBtn.disabled = false;
+                dom.toolsToggleBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+
+            } else {
+                dom.authContainer.innerHTML = `<button id="login-btn" class="auth-btn bg-sky-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-sky-600">تسجيل الدخول بـ Google</button>`;
+                dom.authContainer.querySelector('#login-btn').onclick = () => {
+                    const provider = new firebase.auth.GoogleAuthProvider();
+                    auth.signInWithPopup(provider).catch(err => showToast(`خطأ في تسجيل الدخول: ${err.message}`));
+                };
+                dom.toolsToggleBtn.disabled = true;
+                dom.toolsToggleBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            }
+        }
+        
+        auth.onAuthStateChanged(user => {
+            showLoader();
+            if (user) {
+                state.currentUser = { uid: user.uid, displayName: user.displayName, photoURL: user.photoURL, email: user.email };
+                if (dom.textContainer.innerText === "تم تسجيل الخروج. قم بتسجيل الدخول للبدء." || dom.textContainer.innerText === "") {
+                    state.originalText = `أهلاً بك ${user.displayName}! يمكنك الآن استخدام الأدوات أو استيراد ملف نصي.`;
+                }
+                state.translatedText = "";
+                showToast(`تم تسجيل الدخول بنجاح`);
+            } else {
+                state.currentUser = null;
+                state.originalText = "تم تسجيل الخروج. قم بتسجيل الدخول للبدء.";
+                state.translatedText = "";
+                state.currentLang = 'ar';
+                state.currentReadFileId = null;
+                state.activeTool = null;
+                if (state.isToolsMenuOpen) toggleToolsMenu();
+            }
+            renderAuthState();
+            render();
+            hideLoader();
+        });
+
+        // --- TOOLS LOGIC ---
+        function activateTool(toolName) {
+            toggleToolsMenu();
+            const modalTools = ['saved-words', 'epub-converter', 'quiz', 'read-files']; 
+            const textTools = ['translate-words', 'translate-paragraphs'];
+
+            if (modalTools.includes(toolName)) {
+                // *** CRITICAL FIX: Use the correct modal name from the object ***
+                if (modals[toolName]) {
+                    modals[toolName].show();
+                }
+                return;
+            }
+            if (textTools.includes(toolName)) {
+                state.activeTool = state.activeTool === toolName ? null : toolName;
+            }
+            dom.toolItems.forEach(item => {
+                item.querySelector('div')?.classList.toggle('bg-sky-200', item.dataset.tool === state.activeTool);
+            });
+            render();
+        }
+        
+        function renderToolState() {
+            // *** CRITICAL FIX: Use the correct text based on current language ***
+            const textToRender = state.currentLang === 'ar' ? state.originalText : state.translatedText;
+            if (!textToRender) {
+                showToast("لا يوجد نص لتطبيق الأداة عليه.");
+                state.activeTool = null; // Reset tool if no text
+                render();
+                return;
+            }
+
+            dom.textContainer.contentEditable = false;
+            dom.textContainer.innerHTML = '';
+            
+            const paragraphs = textToRender.split(/(\n\s*\n)/).filter(p => p.trim());
+            
+            if (state.activeTool === 'translate-words') {
+                paragraphs.forEach((pText, index) => {
+                    const pContainer = document.createElement('div');
+                    pContainer.id = `p-${index}`;
+                    pText.split(/(\s+)/).forEach(word => {
+                        if (word.trim()) {
+                            const span = document.createElement('span');
+                            span.textContent = word;
+                            span.className = 'cursor-pointer hover:bg-sky-100 rounded';
+                            span.onclick = () => modals.wordPopup.show(word.trim());
+                            pContainer.appendChild(span);
+                        } else {
+                            pContainer.appendChild(document.createTextNode(word));
+                        }
+                    });
+                    dom.textContainer.appendChild(pContainer);
+                    dom.textContainer.appendChild(document.createElement('br'));
+                    dom.textContainer.appendChild(document.createElement('br'));
+                });
+            } else if (state.activeTool === 'translate-paragraphs') {
+                paragraphs.forEach((pText, index) => {
+                    const pWrap = document.createElement('div');
+                    pWrap.className = 'mb-4';
+                    pWrap.id = `p-${index}`;
+                    const pElem = document.createElement('p');
+                    pElem.textContent = pText;
+                    const btn = document.createElement('button');
+                    btn.className = 'text-sm text-sky-600 hover:text-sky-800 mt-1';
+                    btn.textContent = 'ترجمة الفقرة';
+                    const transDiv = document.createElement('div');
+                    transDiv.className = 'mt-2 p-3 bg-slate-50 rounded-lg border-r-4 hidden';
+                    btn.onclick = async () => {
+                        if (transDiv.classList.toggle('hidden')) return;
+                        const sourceLang = detectLanguage(pText);
+                        const targetLang = sourceLang === 'ar' ? 'en' : 'ar';
+                        transDiv.textContent = 'جاري الترجمة...';
+                        transDiv.textContent = await translateText(pText, targetLang, sourceLang);
+                    };
+                    pWrap.append(pElem, btn, transDiv);
+                    dom.textContainer.appendChild(pWrap);
+                });
+            }
+        }
+
+        function toggleToolsMenu() {
+            if (dom.toolsToggleBtn.disabled) return;
+            state.isToolsMenuOpen = !state.isToolsMenuOpen;
+            dom.toolsMenu.classList.toggle('hidden', !state.isToolsMenuOpen);
+            dom.toolsArrow.classList.toggle('rotate-180', state.isToolsMenuOpen);
+        }
+
+        // --- MODALS & POPUPS ---
+        // *** CRITICAL FIX: Use kebab-case for modal keys to match data-tool attributes ***
+        const modals = {
+            wordPopup: {
+                element: document.getElementById('word-popup'),
+                show: async function(word) {
+                    const sourceLang = detectLanguage(word);
+                    const targetLang = sourceLang === 'ar' ? 'en' : 'ar';
+                    this.element.innerHTML = `<div class="p-4 text-center">جاري ترجمة "${word}"...</div>`;
+                    this.element.classList.remove('hidden', 'slide-down');
+                    this.element.classList.add('slide-up');
+                    
+                    const translation = await translateText(word, targetLang, sourceLang);
+                    const pos = sourceLang === 'en' ? (await this.getWordInfo(word)).pos : 'N/A';
+                    
+                    this.element.innerHTML = `
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <h3 class="text-2xl font-bold">${word}</h3>
+                                <p class="text-xl text-slate-600">${translation}</p>
+                                <span class="text-sm font-semibold px-2 py-1 rounded-full mt-2 inline-block ${getPosColor(pos)}">${pos}</span>
+                            </div>
+                            <button id="add-word-btn" class="text-4xl ${!state.currentUser ? 'text-slate-300 cursor-not-allowed' : 'text-sky-500 hover:text-sky-700'} p-2 rounded-full hover:bg-slate-100 w-12 h-12 flex items-center justify-center">+</button>
+                        </div>`;
+                    
+                    document.getElementById('add-word-btn').onclick = () => {
+                        if (!state.currentUser) { showToast('يجب تسجيل الدخول لحفظ الكلمات'); return; }
+                        const wordToSave = sourceLang === 'en' ? { word, translation, pos } : { word: translation, translation: word, pos:'N/A' };
+                        savedWordsDB.save(wordToSave).then(saved => {
+                           showToast(saved ? `تم حفظ "${wordToSave.word}"` : 'الكلمة محفوظة بالفعل');
+                        });
+                    };
+                },
+                hide: function() { this.element.classList.add('slide-down'); },
+                getWordInfo: async (word) => {
+                    try {
+                        const response = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${word.toLowerCase().replace(/[.,!?"']/g, '')}`);
+                        if (!response.ok) return { pos: 'unknown' };
+                        const data = await response.json();
+                        return { pos: data[0]?.meanings[0]?.partOfSpeech || 'unknown' };
+                    } catch (error) { return { pos: 'unknown' }; }
+                }
+            },
+            'saved-words': {
+                element: document.getElementById('saved-words-modal'),
+                init: function() {
+                    this.element.innerHTML = `
+                        <div class="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[80vh] flex flex-col fade-in">
+                            <div class="p-4 border-b flex justify-between items-center"><h3 class="text-xl font-bold">الكلمات المحفوظة</h3><button id="close-saved-words-btn" class="text-slate-500 hover:text-slate-800 text-3xl">&times;</button></div>
+                            <div id="saved-words-list" class="flex-1 overflow-y-auto p-4 space-y-3"></div>
+                        </div>`;
+                    this.element.querySelector('#close-saved-words-btn').onclick = () => this.hide();
+                    this.element.onclick = (e) => { if (e.target === this.element) this.hide(); };
+                },
+                show: async function() {
+                    const listEl = this.element.querySelector('#saved-words-list');
+                    listEl.innerHTML = '<p class="text-slate-500 text-center py-8">جاري التحميل...</p>';
+                    this.element.classList.remove('hidden');
+
+                    const words = await savedWordsDB.get();
+                    listEl.innerHTML = '';
+
+                    if (words.length === 0) {
+                        listEl.innerHTML = `<p class="text-slate-500 text-center py-8">لا توجد كلمات محفوظة.</p>`;
+                    } else {
+                        words.forEach(word => {
+                            const wordEl = document.createElement('div');
+                            wordEl.className = 'bg-slate-50 p-3 rounded-lg flex justify-between items-center';
+                            wordEl.innerHTML = `
+                                <div><p class="font-bold">${word.word} <span class="font-normal text-slate-500">→ ${word.translation}</span></p><span class="text-xs font-semibold px-2 py-0.5 rounded-full mt-1 inline-block ${getPosColor(word.pos)}">${word.pos}</span></div>
+                                <button data-id="${word.id}" class="delete-word-btn text-red-500 hover:text-red-700 p-2 rounded-full hover:bg-red-100"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z"></path></svg></button>`;
+                            listEl.appendChild(wordEl);
+                        });
+                        listEl.querySelectorAll('.delete-word-btn').forEach(btn => {
+                            btn.onclick = async () => {
+                                showLoader();
+                                await savedWordsDB.delete(btn.dataset.id);
+                                hideLoader();
+                                showToast('تم حذف الكلمة');
+                                this.show();
+                            };
+                        });
+                    }
+                },
+                hide: function() { this.element.classList.add('hidden'); }
+            },
+            'read-files': {
+                element: document.getElementById('read-files-modal'),
+                init: function() {
+                    this.element.innerHTML = `
+                        <div class="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[80vh] flex flex-col fade-in">
+                            <div class="p-4 border-b flex justify-between items-center"><h3 class="text-xl font-bold">ملفاتي المقروءة</h3><button id="close-read-files-btn" class="text-slate-500 hover:text-slate-800 text-3xl">&times;</button></div>
+                            <div id="read-files-list" class="flex-1 overflow-y-auto p-4 space-y-2"></div>
+                        </div>`;
+                    this.element.querySelector('#close-read-files-btn').onclick = () => this.hide();
+                    this.element.onclick = (e) => { if (e.target === this.element) this.hide(); };
+                },
+                show: async function() {
+                    const listEl = this.element.querySelector('#read-files-list');
+                    listEl.innerHTML = '<p class="text-slate-500 text-center py-8">جاري تحميل ملفاتك...</p>';
+                    this.element.classList.remove('hidden');
+
+                    const files = await readFilesDB.get();
+                    listEl.innerHTML = '';
+                    if (files.length === 0) {
+                        listEl.innerHTML = '<p class="text-slate-500 text-center py-8">لم تقم باستيراد أي ملفات نصية بعد.</p>';
+                    } else {
+                        files.forEach(file => {
+                            const fileEl = document.createElement('div');
+                            fileEl.className = 'bg-slate-50 p-3 rounded-lg flex justify-between items-center';
+                            fileEl.innerHTML = `
+                                <div class="cursor-pointer flex-1" data-id="${file.id}">
+                                    <p class="font-bold">${file.name}</p>
+                                    <p class="text-xs text-slate-500">آخر قراءة: ${new Date(file.lastRead.toDate()).toLocaleString()}</p>
+                                </div>
+                                <button data-id="${file.id}" class="delete-file-btn text-red-500 hover:text-red-700 p-2 rounded-full hover:bg-red-100"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z"></path></svg></button>
+                            `;
+                            fileEl.querySelector('.cursor-pointer').onclick = async () => {
+                                this.hide();
+                                showLoader();
+                                const fileContent = await readFilesDB.getContent(file.id);
+                                hideLoader();
+                                if (fileContent) {
+                                    state.currentReadFileId = file.id;
+                                    renderText(fileContent.content);
+                                    setTimeout(() => {
+                                        const progressEl = document.getElementById(`p-${fileContent.progress}`);
+                                        if(progressEl) progressEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                    }, 200);
+                                }
+                            };
+                            fileEl.querySelector('.delete-file-btn').onclick = async () => {
+                                if(confirm(`هل أنت متأكد من حذف ملف "${file.name}"؟`)) {
+                                    await readFilesDB.delete(file.id);
+                                    showToast("تم حذف الملف");
+                                    this.show();
+                                }
+                            };
+                            listEl.appendChild(fileEl);
+                        });
+                    }
+                },
+                hide: function() { this.element.classList.add('hidden'); }
+            },
+            'epub-converter': {
+                 element: document.getElementById('epub-converter-modal'),
+                init: function() {
+                    this.element.innerHTML = `
+                        <div class="bg-white rounded-2xl shadow-xl w-full max-w-md flex flex-col fade-in">
+                            <div class="p-4 border-b flex justify-between items-center"><h3 class="text-xl font-bold">تحويل EPUB إلى TXT</h3><button id="close-converter-btn" class="text-slate-500 hover:text-slate-800 text-3xl">&times;</button></div>
+                            <div class="p-6 text-center">
+                                <p class="mb-4 text-slate-600">اختر ملف EPUB لتحويله إلى ملف نصي (TXT).</p>
+                                <label for="epub-file-input" class="w-full inline-block bg-sky-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-sky-600 cursor-pointer">اختر ملف EPUB</label>
+                                <input type="file" id="epub-file-input" class="hidden" accept=".epub">
+                                <div id="converter-status" class="mt-4 text-sm text-slate-500 h-5"></div>
+                                <a id="download-txt-btn" class="hidden w-full mt-4 inline-block bg-green-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-600">تحميل الملف النصي (TXT)</a>
+                            </div>
+                        </div>`;
+                    this.element.querySelector('#close-converter-btn').onclick = () => this.hide();
+                    this.element.querySelector('#epub-file-input').onchange = (e) => this.handleFile(e.target.files[0]);
+                },
+                show: function() { this.element.classList.remove('hidden'); },
+                hide: function() { this.element.classList.add('hidden'); },
+                handleFile: function(file) {
+                    if (!file) return;
+                    if (typeof ePub === 'undefined') { this.element.querySelector('#converter-status').textContent = 'خطأ: فشل تحميل مكتبات التحويل.'; return; }
+                    const statusEl = this.element.querySelector('#converter-status');
+                    const downloadBtn = this.element.querySelector('#download-txt-btn');
+                    statusEl.textContent = 'جاري التحويل...'; downloadBtn.classList.add('hidden');
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        try {
+                            const book = ePub(e.target.result);
+                            book.ready.then(() => {
+                                const allPromises = book.spine.items.map(item => item.load(book.load.bind(book)).then(doc => {
+                                    doc.body.querySelectorAll('p, h1, h2, h3').forEach(el => el.insertAdjacentText('afterend', '\n\n'));
+                                    return doc.body.textContent || "";
+                                }));
+                                Promise.all(allPromises).then(texts => {
+                                    const fullText = texts.join('\n\n').replace(/(\s*\n\s*){3,}/g, '\n\n').trim();
+                                    const blob = new Blob([fullText], { type: 'text/plain;charset=utf-8' });
+                                    downloadBtn.href = URL.createObjectURL(blob);
+                                    downloadBtn.download = file.name.replace(/\.epub$/i, '.txt');
+                                    downloadBtn.classList.remove('hidden');
+                                    statusEl.textContent = 'اكتمل التحويل!';
+                                }).catch(() => statusEl.textContent = 'خطأ في استخراج النص.');
+                            }).catch(() => statusEl.textContent = 'خطأ: ملف EPUB غير صالح.');
+                        } catch (err) { statusEl.textContent = 'خطأ فادح في معالجة الملف.'; }
+                    };
+                    reader.readAsArrayBuffer(file);
+                }
+            },
+            'quiz': {
+                element: document.getElementById('quiz-modal'),
+                state: { questions: [], current: 0, score: 0, incorrect: [] },
+                init: function() {},
+                show: async function(words = null) {
+                    const wordsToTest = words || await savedWordsDB.get();
+                    if (wordsToTest.length < 4) { showToast('يجب إضافة 4 كلمات على الأقل لبدء الاختبار.'); return; }
+                    this.state = { questions: shuffleArray([...wordsToTest]), current: 0, score: 0, incorrect: [] };
+                    this.element.classList.remove('hidden'); this.renderQuestion();
+                },
+                hide: function() { this.element.classList.add('hidden'); },
+                renderQuestion: async function() {
+                    if (this.state.current >= this.state.questions.length) { this.renderResult(); return; }
+                    const questionData = this.state.questions[this.state.current];
+                    const allWords = await savedWordsDB.get();
+                    const type = Math.random() < 0.5 ? 'en_to_ar' : 'ar_to_en';
+                    let question, correctAnswer, choices;
+                    if (type === 'en_to_ar' && questionData.word) {
+                        question = questionData.word; correctAnswer = questionData.translation;
+                        choices = this.generateChoices(allWords, 'translation', correctAnswer, questionData.word);
+                    } else {
+                        question = questionData.translation; correctAnswer = questionData.word;
+                        choices = this.generateChoices(allWords, 'word', correctAnswer, questionData.translation);
+                    }
+                    this.element.innerHTML = `
+                        <div class="w-full max-w-2xl mx-auto flex-1 flex flex-col">
+                            <div class="flex justify-between items-center mb-4"><h2 class="text-xl font-bold text-slate-700">اختبار الكلمات</h2><button id="close-quiz-btn" class="text-slate-500 hover:text-slate-800 text-3xl">&times;</button></div>
+                            <div class="bg-white rounded-xl shadow-md p-6 flex-1 flex flex-col justify-center">
+                                <div class="text-center mb-8"><p class="text-slate-500 mb-2">ما هي ترجمة الكلمة التالية؟</p><h3 class="text-4xl font-bold text-sky-600">${question}</h3></div>
+                                <div class="grid grid-cols-2 gap-4">${choices.map(c => `<button class="quiz-choice-btn p-4 bg-slate-100 rounded-lg text-lg font-semibold hover:bg-sky-100">${c}</button>`).join('')}</div>
+                            </div>
+                            <div class="text-center mt-4 text-lg font-semibold text-slate-500">${this.state.current + 1} / ${this.state.questions.length}</div>
+                        </div>`;
+                    this.element.querySelector('#close-quiz-btn').onclick = () => this.hide();
+                    this.element.querySelectorAll('.quiz-choice-btn').forEach(btn => { btn.onclick = () => this.handleAnswer(btn, btn.textContent, correctAnswer, questionData); });
+                },
+                generateChoices: function(allWords, field, correctAnswer, sourceWord) {
+                     let choices = [correctAnswer];
+                     let wrongAnswers = allWords.filter(w => w[field] !== correctAnswer && w.word !== sourceWord && w.translation !== sourceWord);
+                     wrongAnswers = shuffleArray(wrongAnswers);
+                     for (let i = 0; i < Math.min(3, wrongAnswers.length); i++) { choices.push(wrongAnswers[i][field]); }
+                     while (choices.length < 4) { choices.push(`خيار ${choices.length}`); }
+                     return shuffleArray(choices);
+                },
+                handleAnswer: function(btn, selectedAnswer, correctAnswer, questionData) {
+                    this.element.querySelectorAll('.quiz-choice-btn').forEach(b => b.disabled = true);
+                    if (selectedAnswer === correctAnswer) {
+                        btn.classList.add('correct-answer'); this.state.score++;
+                    } else {
+                        btn.classList.add('wrong-answer'); this.state.incorrect.push(questionData);
+                        this.element.querySelectorAll('.quiz-choice-btn').forEach(b => { if (b.textContent === correctAnswer) b.classList.add('correct-answer'); });
+                    }
+                    setTimeout(() => { this.state.current++; this.renderQuestion(); }, 1500);
+                },
+                renderResult: function() {
+                    const score = this.state.score; const total = this.state.questions.length; const incorrectCount = this.state.incorrect.length;
+                    this.element.innerHTML = `
+                         <div class="w-full max-w-2xl mx-auto flex-1 flex flex-col justify-center text-center">
+                            <div class="bg-white rounded-xl shadow-md p-8">
+                                <h2 class="text-3xl font-bold mb-2">انتهى الاختبار!</h2>
+                                <p class="text-xl text-slate-600 mb-6">نتيجتك هي:</p>
+                                <p class="text-6xl font-bold text-sky-600 mb-8">${score} <span class="text-4xl text-slate-400">/ ${total}</span></p>
+                                ${incorrectCount > 0 ? `<button id="retest-btn" class="w-full mb-4 bg-yellow-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-yellow-600">إعادة اختبار ${incorrectCount} كلمات خاطئة</button>` : ''}
+                                <button id="close-result-btn" class="w-full bg-slate-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-slate-600">العودة للرئيسية</button>
+                            </div>
+                        </div>`;
+                    if (incorrectCount > 0) { this.element.querySelector('#retest-btn').onclick = () => this.show(this.state.incorrect); }
+                    this.element.querySelector('#close-result-btn').onclick = () => this.hide();
+                }
+            },
+        };
+
+        // --- FIRESTORE DB APIs ---
+        const savedWordsDB = {
+            get: async () => {
+                if (!state.currentUser) return [];
+                try {
+                    const snapshot = await db.collection('users').doc(state.currentUser.uid).collection('words').orderBy('createdAt', 'desc').get();
+                    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                } catch (error) { showToast('خطأ في جلب الكلمات'); console.error(error); return []; }
+            },
+            save: async (wordData) => {
+                if (!state.currentUser) return false;
+                const wordsCollection = db.collection('users').doc(state.currentUser.uid).collection('words');
+                const query = await wordsCollection.where('word', '==', wordData.word.toLowerCase()).get();
+                if (!query.empty) return false;
+                try {
+                    await wordsCollection.add({ ...wordData, word: wordData.word.toLowerCase(), createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+                    return true;
+                } catch (error) { showToast('خطأ في حفظ الكلمة'); console.error(error); return false; }
+            },
+            delete: async (wordId) => {
+                if (!state.currentUser) return;
+                try {
+                    await db.collection('users').doc(state.currentUser.uid).collection('words').doc(wordId).delete();
+                } catch (error) { showToast('خطأ في حذف الكلمة'); console.error(error); }
+            }
+        };
+        const readFilesDB = {
+            get: async () => {
+                if (!state.currentUser) return [];
+                try {
+                    const snapshot = await db.collection('users').doc(state.currentUser.uid).collection('readFiles').orderBy('lastRead', 'desc').get();
+                    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                } catch (error) { showToast('خطأ في جلب الملفات'); console.error(error); return []; }
+            },
+            getContent: async (fileId) => {
+                 if (!state.currentUser) return null;
+                 try {
+                    const doc = await db.collection('users').doc(state.currentUser.uid).collection('readFiles').doc(fileId).get();
+                    return doc.exists ? doc.data() : null;
+                 } catch (error) { showToast('خطأ في تحميل محتوى الملف'); console.error(error); return null; }
+            },
+            save: async (fileName, content) => {
+                if (!state.currentUser) return null;
+                const newFile = { name: fileName, content: content, progress: 0, lastRead: firebase.firestore.FieldValue.serverTimestamp(), createdAt: firebase.firestore.FieldValue.serverTimestamp() };
+                try {
+                    const docRef = await db.collection('users').doc(state.currentUser.uid).collection('readFiles').add(newFile);
+                    return docRef.id;
+                } catch (error) { showToast('خطأ في حفظ الملف'); console.error(error); return null; }
+            },
+            updateProgress: async (fileId, progressIndex) => {
+                if (!state.currentUser || !fileId) return;
+                try {
+                    await db.collection('users').doc(state.currentUser.uid).collection('readFiles').doc(fileId).update({ progress: progressIndex, lastRead: firebase.firestore.FieldValue.serverTimestamp() });
+                } catch (error) { console.error("Error updating progress:", error); }
+            },
+            delete: async (fileId) => {
+                 if (!state.currentUser) return;
+                 try { await db.collection('users').doc(state.currentUser.uid).collection('readFiles').doc(fileId).delete(); } catch (error) { showToast('خطأ في حذف الملف'); console.error(error); }
+            }
+        };
+
+        // --- READING PROGRESS TRACKER ---
+        const updateReadingProgressDebounced = debounce(() => {
+            if (!state.currentReadFileId || state.activeTool) return;
+            const container = dom.textContainer;
+            const paragraphs = Array.from(container.querySelectorAll('div[id^="p-"]'));
+            if (paragraphs.length === 0) return;
+            let topVisibleIndex = 0;
+            for (let i = 0; i < paragraphs.length; i++) {
+                const rect = paragraphs[i].getBoundingClientRect();
+                if (rect.top >= container.getBoundingClientRect().top) {
+                    topVisibleIndex = i;
+                    break;
+                }
+            }
+            readFilesDB.updateProgress(state.currentReadFileId, topVisibleIndex);
+        }, 1500);
+
+        // --- INITIALIZATION ---
+        function init() {
+            setTimeout(() => { dom.splashScreen.classList.add('hidden'); }, 2500);
+            
+            Object.values(modals).forEach(modal => modal.init?.());
+            
+            document.addEventListener('click', (e) => {
+                if (!modals.wordPopup.element.classList.contains('hidden') && !modals.wordPopup.element.contains(e.target) && !e.target.closest('.cursor-pointer')) {
+                    modals.wordPopup.hide();
+                }
+            });
+
+            dom.textContainer.addEventListener('input', () => {
+                if (!state.activeTool) {
+                    const currentText = dom.textContainer.innerText;
+                    const detectedLang = detectLanguage(currentText);
+                    state.currentLang = detectedLang;
+                    if (detectedLang === 'ar') {
+                        state.originalText = currentText;
+                        state.translatedText = '';
+                    } else {
+                        state.translatedText = currentText;
+                        state.originalText = '';
+                    }
+                    state.currentReadFileId = null;
+                    dom.textContainer.dir = state.currentLang === 'ar' ? 'rtl' : 'ltr';
+                    dom.textContainer.style.textAlign = state.currentLang === 'ar' ? 'right' : 'left';
+                }
+            });
+            
+            dom.textContainer.addEventListener('scroll', updateReadingProgressDebounced);
+            dom.toolsToggleBtn.addEventListener('click', toggleToolsMenu);
+            
+            dom.toolItems.forEach(item => {
+                item.addEventListener('click', (e) => {
+                    if (dom.toolsToggleBtn.disabled) {
+                        e.preventDefault();
+                        showToast('الرجاء تسجيل الدخول أولاً.');
+                        return;
+                    }
+                    if (item.tagName.toLowerCase() === 'a') {
+                        e.preventDefault();
+                        activateTool(item.dataset.tool);
+                    }
+                    else if (item.tagName.toLowerCase() === 'label') {
+                        if (state.isToolsMenuOpen) {
+                            toggleToolsMenu();
+                        }
+                    }
+                });
+            });
+
+            dom.txtImporter.addEventListener('change', async (event) => {
+                if (!state.currentUser) { showToast('يجب تسجيل الدخول لاستيراد وحفظ الملفات.'); event.target.value = ''; return; }
+                const file = event.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = async (e) => { 
+                    const text = e.target.result;
+                    showLoader();
+                    const newFileId = await readFilesDB.save(file.name, text);
+                    hideLoader();
+                    if(newFileId) {
+                        state.currentReadFileId = newFileId;
+                        renderText(text);
+                        showToast('تم استيراد وحفظ الملف بنجاح'); 
+                    }
+                };
+                reader.readAsText(file);
+                event.target.value = '';
+            });
+
+            renderAuthState();
+            render();
+        }
+        
+        init();
+    };
+    </script>
+</body>
+</html>
