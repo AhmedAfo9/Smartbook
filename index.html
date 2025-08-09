@@ -3,114 +3,186 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>مترجم احترافي</title>
+    <title>ᗷY : ᎪhmᎬᎠ fᎪᏞᎪh</title>
     
-    <!-- Tailwind CSS for styling -->
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- Libraries for EPUB conversion -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jszip@3.1.5/dist/jszip.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/epubjs@0.3.93/dist/epub.min.js"></script>
 
-    <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
 
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap');
+        /* --- Google Fonts --- */
+        @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&family=Cairo:wght@400;500;700&family=Merriweather:ital,wght@0,400;0,700;1,400&family=Roboto:wght@400;500;700&display=swap');
+        
+        /* --- Base Styles --- */
         html, body {
             height: 100%; height: 100dvh;
             font-family: 'Tajawal', sans-serif;
             overscroll-behavior: none;
+            background-color: #f0fdfa; /* teal-50 */
         }
+
+        /* --- Custom Scrollbar --- */
         #text-container::-webkit-scrollbar { width: 8px; }
-        #text-container::-webkit-scrollbar-track { background: #f1f5f9; }
-        #text-container::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 10px; }
+        #text-container::-webkit-scrollbar-track { background: #ccfbf1; /* teal-100 */ }
+        #text-container::-webkit-scrollbar-thumb { background: #5eead4; /* teal-300 */ border-radius: 10px; }
+        #text-container::-webkit-scrollbar-thumb:hover { background: #2dd4bf; /* teal-400 */ }
+
+        /* --- ContentEditable Placeholder --- */
         [contenteditable]:empty:before {
             content: attr(placeholder);
             pointer-events: none;
             display: block;
-            color: #9ca3af;
+            color: #94a3b8; /* slate-400 */
         }
-        .fade-in { animation: fadeIn 0.3s ease-in-out; }
-        .slide-up { animation: slideUp 0.3s ease-in-out; }
-        .slide-down { animation: slideDown 0.3s ease-in-out forwards; }
-        @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
-        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
-        @keyframes slideDown { from { transform: translateY(0); } to { transform: translateY(100%); } }
-        .correct-answer { background-color: #10B981 !important; color: white !important; transform: scale(1.05); }
-        .wrong-answer { background-color: #EF4444 !important; color: white !important; }
-        .quiz-choice-btn { transition: all 0.2s ease-in-out; }
         
+        /* --- Animations & Transitions --- */
+        #word-popup {
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s;
+        }
+        #word-popup.hidden {
+            opacity: 0;
+            transform: translateY(100%);
+        }
+        .fade-in { animation: fadeIn 0.3s ease-out both; }
+        .fade-out { animation: fadeOut 0.3s ease-in both; }
+        .slide-up-fade { animation: slideUpFade 0.4s cubic-bezier(0.4, 0, 0.2, 1) both; }
+        
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; visibility: hidden; } }
+        @keyframes slideUpFade { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        
+        /* --- Splash Screen --- */
         #splash-screen {
-            position: fixed; inset: 0; z-index: 200; display: flex; align-items: center; justify-content: center;
-            background-color: #0c0a09;
-            background-image: linear-gradient(45deg, rgba(2,0,36,1) 0%, rgba(9,9,121,0.5) 35%, rgba(0,212,255,0.2) 100%),
-                              linear-gradient(135deg, #020617, #1e293b);
+            position: fixed; inset: 0; z-index: 200;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            background-color: #134e4a; /* teal-900 */
             color: white;
-            transition: opacity 1.5s ease-out, visibility 1.5s ease-out;
+            transition: opacity 0.5s ease-out, visibility 0.5s ease-out;
         }
         #splash-screen.hidden { opacity: 0; visibility: hidden; }
 
+        /* --- Main Text Area --- */
         #text-container {
-            font-size: 1.25rem; 
-            line-height: 2.2;   
+            font-size: 1.2rem; 
+            line-height: 2.4;   
             font-weight: 500;   
             text-align: justify;
+            color: #1f2937; /* slate-800 */
+            transition: font-family 0.3s ease-in-out;
         }
-        #text-container p { margin-bottom: 1.5rem; }
-        .bookmark-highlight {
-            background-color: #e0f2fe;
+        .paragraph-wrap {
+            position: relative;
+            padding-left: 40px;
+            margin-bottom: 1rem;
             border-radius: 8px;
-            padding: 4px;
-            transition: background-color 0.5s ease-in-out;
+            transition: background-color 0.3s ease;
         }
+        .paragraph-wrap:hover {
+            background-color: #f0fdfa; /* teal-50 */
+        }
+        html[dir="ltr"] .paragraph-wrap { padding-left: 40px; padding-right: 0; }
+        html[dir="rtl"] .paragraph-wrap { padding-right: 40px; padding-left: 0; }
+        
+        /* --- Bookmark Icon --- */
+        .bookmark-icon {
+            position: absolute; top: 8px; left: 0;
+            display:flex; align-items:center; justify-content:center;
+            width: 32px; height: 32px;
+            border-radius: 8px; cursor: pointer;
+            color: #9ca3af; /* slate-400 */
+            transition: all 0.2s ease-in-out;
+        }
+        html[dir="rtl"] .bookmark-icon { left: auto; right: 0; }
+        .bookmark-icon:hover { background: #ccfbf1; color: #0d9488; }
+        .bookmark-icon.active {
+            background: #fef9c3; /* yellow-100 */
+            color: #ca8a04; /* yellow-600 */
+        }
+
+        /* --- Quiz & Other states --- */
+        .correct-answer { background-color: #10b981 !important; color: white !important; }
+        .wrong-answer { background-color: #ef4444 !important; color: white !important; animation: shake 0.5s; }
+        @keyframes shake { 10%, 90% { transform: translateX(-1px); } 20%, 80% { transform: translateX(2px); } 30%, 50%, 70% { transform: translateX(-4px); } 40%, 60% { transform: translateX(4px); } }
+        
+        /* --- Tool Item Styling --- */
+        .tool-item.active-tool > div {
+             background-color: #0d9488; /* teal-600 */
+             color: white;
+        }
+        .local-loader {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid currentColor;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
     </style>
 </head>
-<body class="bg-slate-100 text-slate-800 w-screen overflow-hidden flex flex-col">
+<body class="bg-gray-50 text-slate-800 w-screen overflow-hidden flex flex-col antialiased">
 
     <div id="splash-screen">
-        <h1 class="text-4xl font-bold animate-pulse">By Ahmed Falah</h1>
+        <svg class="w-24 h-24 text-teal-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 21l5.25-11.25L21 21m-9-3h7.5M3 5.621a48.474 48.474 0 016-.371m0 0c1.12 0 2.233.038 3.334.114M9 5.25V3m3.334 2.364C13.18 7.061 14.289 7.5 15.5 7.5c1.21 0 2.32-.439 3.166-1.136m0 0V3m-3.166 1.136c1.12 0 2.233.038 3.334.114m-16.5 0a48.472 48.472 0 006-.372m0 0v-2.25" />
+        </svg>
+        <h1 class="text-2xl font-bold mt-4 tracking-wider">ᗷY : ᎪhmᎬᎠ fᎪᏞᎪh</h1>
     </div>
 
-    <header class="relative bg-white shadow-md z-30 flex-shrink-0">
-        <div class="container mx-auto px-4 py-3 flex justify-between items-center">
-            <div id="auth-container"></div>
-            <button id="tools-toggle-btn" class="flex items-center gap-2 text-lg font-semibold p-2 rounded-lg hover:bg-slate-100 transition-opacity">
+    <header class="relative bg-white/70 backdrop-blur-lg border-b border-slate-200 z-30 flex-shrink-0">
+        <div class="container mx-auto px-4 sm:px-6 py-3 flex justify-between items-center">
+             <div id="auth-container"></div>
+            <button id="tools-toggle-btn" class="flex items-center gap-2 text-lg font-bold text-slate-700 p-2 rounded-lg hover:bg-slate-100 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-teal-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M9.53 16.122a3 3 0 00-5.78 1.128 2.25 2.25 0 01-2.47 2.118v-.09a2.25 2.25 0 012.244-2.477zM13.28 20.72a3 3 0 005.78-1.128 2.25 2.25 0 012.47-2.118v.09a2.25 2.25 0 01-2.244 2.477zM18.663 16.122a3 3 0 01-5.78 1.128 2.25 2.25 0 00-2.47 2.118v-.09a2.25 2.25 0 002.244-2.477zM11.337 16.122a3 3 0 015.78 1.128 2.25 2.25 0 002.47 2.118v-.09a2.25 2.25 0 00-2.244-2.477zM6.716 11.022a3 3 0 01-5.78-1.128 2.25 2.25 0 00-2.47-2.118v.09a2.25 2.25 0 002.244 2.477zM3.28 6.28a3 3 0 015.78 1.128 2.25 2.25 0 002.47 2.118v-.09a2.25 2.25 0 00-2.244-2.477zM9.53 3.878a3 3 0 00-5.78-1.128 2.25 2.25 0 01-2.47-2.118v.09A2.25 2.25 0 014.56 3.13z" />
+                </svg>
                 <span>الأدوات</span>
                 <svg id="tools-arrow" class="w-5 h-5 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
             </button>
         </div>
-        <div id="tools-menu" class="hidden absolute top-full right-0 left-0 bg-white/95 backdrop-blur-sm border-t p-4">
-             <div class="grid grid-cols-3 gap-3 text-center">
-                <a href="#" class="tool-item group" data-tool="translate-words"><div class="p-3 bg-slate-100 rounded-lg group-hover:bg-sky-100"><svg class="w-7 h-7 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7L8.5 4M10 7L11.5 4M10 7v5m-3-2h6"></path></svg></div><span class="mt-2 block text-xs font-medium">ترجمة الكلمات</span></a>
-                <a href="#" class="tool-item group" data-tool="translate-paragraphs"><div class="p-3 bg-slate-100 rounded-lg group-hover:bg-sky-100"><svg class="w-7 h-7 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg></div><span class="mt-2 block text-xs font-medium">ترجمة الفقرات</span></a>
-                <a href="#" class="tool-item group" data-tool="saved-words"><div class="p-3 bg-slate-100 rounded-lg group-hover:bg-sky-100"><svg class="w-7 h-7 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"></path></svg></div><span class="mt-2 block text-xs font-medium">الكلمات المضافة</span></a>
-                <a href="#" class="tool-item group" data-tool="read-files"><div class="p-3 bg-slate-100 rounded-lg group-hover:bg-sky-100"><svg class="w-7 h-7 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25"/></svg></div><span class="mt-2 block text-xs font-medium">المقروء</span></a>
-                <label for="txt-importer" class="tool-item group cursor-pointer" data-tool="txt-importer"><div class="p-3 bg-slate-100 rounded-lg group-hover:bg-sky-100"><svg class="w-7 h-7 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg></div><span class="mt-2 block text-xs font-medium">استيراد TXT</span><input type="file" id="txt-importer" class="hidden" accept=".txt,text/plain"></label>
-                <a href="#" class="tool-item group opacity-50 cursor-not-allowed" data-tool="epub-converter"><div class="p-3 bg-slate-100 rounded-lg"><svg class="w-7 h-7 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h5M4 12v5h5M15 4v5h5M15 12v5h5"></path></svg></div><span class="mt-2 block text-xs font-medium">تحويل EPUB</span></a>
-                <a href="#" class="tool-item group" data-tool="quiz"><div class="p-3 bg-slate-100 rounded-lg group-hover:bg-sky-100"><svg class="w-7 h-7 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.085a2 2 0 00-1.736.97l-1.9 3.8a2 2 0 00.23 2.16l3.5 3.5m7-10l-3.5 7"></path></svg></div><span class="mt-2 block text-xs font-medium">اختبار الكلمات</span></a>
-            </div>
+        <div id="tools-menu" class="hidden absolute top-full right-0 left-0 bg-white/95 backdrop-blur-sm border-b border-slate-200 shadow-md">
+             <div class="container mx-auto p-6">
+                <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-5 text-center">
+                </div>
+             </div>
         </div>
     </header>
 
-    <main id="main-content" class="flex-1 flex flex-col overflow-hidden p-4">
+    <main id="main-content" class="relative flex-1 flex flex-col overflow-hidden p-4 sm:p-6">
         <div id="text-container" spellcheck="false" placeholder="قم بتسجيل الدخول للبدء..."
-            class="flex-1 bg-white rounded-xl shadow-inner p-6 overflow-y-auto focus:outline-none focus:ring-2 focus:ring-sky-400"
+            class="flex-1 bg-white rounded-xl shadow-sm p-6 sm:p-8 overflow-y-auto focus:outline-none focus:ring-2 focus:ring-teal-500 transition-shadow duration-300"
             dir="rtl">
         </div>
     </main>
     
-    <div id="word-popup" class="hidden fixed bottom-0 left-0 right-0 bg-white p-5 shadow-[0_-4px_15px_rgba(0,0,0,0.1)] rounded-t-2xl z-40"></div>
-    <div id="saved-words-modal" class="hidden fixed inset-0 bg-black bg-opacity-40 z-50 flex items-center justify-center p-4"></div>
-    <div id="read-files-modal" class="hidden fixed inset-0 bg-black bg-opacity-40 z-50 flex items-center justify-center p-4"></div>
+    <div id="word-popup" class="hidden fixed bottom-0 left-0 right-0 z-40"></div>
+    <div id="modal-overlay" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-40 fade-in"></div>
+    <div id="saved-words-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4"></div>
+    <div id="read-files-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4"></div>
     <div id="quiz-modal" class="hidden fixed inset-0 bg-slate-100 z-50 flex flex-col p-4"></div>
-    <div id="loader" class="hidden fixed inset-0 bg-black bg-opacity-20 z-[100] flex items-center justify-center"><div class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-sky-500"></div></div>
-    <div id="toast" class="hidden fixed bottom-24 left-1/2 -translate-x-1/2 bg-slate-800 text-white py-2 px-5 rounded-full shadow-lg z-[101]"></div>
+    <div id="font-style-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4"></div>
+    
+    <div id="loader" class="hidden fixed inset-0 bg-white/50 backdrop-blur-sm z-[100] flex items-center justify-center"><div class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-teal-500"></div></div>
+    <div id="toast" class="hidden fixed bottom-24 left-1/2 -translate-x-1/2 bg-slate-900 text-white py-3 px-6 rounded-full shadow-lg z-[101] text-sm font-semibold"></div>
+    
+    <input type="file" id="txt-importer" class="hidden" accept=".txt,text/plain">
+    <input type="file" id="pdf-importer" class="hidden" accept="application/pdf">
 
     <script>
-    window.onload = () => {
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- SPLASH SCREEN LOGIC ---
+        let appIsReady = false;
+        let minSplashTimePassed = false;
+        function tryHideSplashScreen() { if (appIsReady && minSplashTimePassed) { dom.splashScreen.classList.add('hidden'); } }
+        setTimeout(() => { minSplashTimePassed = true; tryHideSplashScreen(); }, 1800);
+
         const firebaseConfig = {
             apiKey: "AIzaSyD0R4zxahJVgm-NBMvL74_uJ3YNG0XqKLg",
             authDomain: "smartbook-99636.firebaseapp.com",
@@ -119,60 +191,92 @@
             messagingSenderId: "240681472592",
             appId: "1:240681472592:web:d297bfa696011a1ae4b755"
         };
-
         firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
         const db = firebase.firestore();
+        if (window['pdfjsLib']) { pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js'; }
 
         let state = {
             originalText: "",
             translatedText: "",
             currentLang: 'ar',
-            activeTools: {
-                'translate-words': false,
-                'translate-paragraphs': false,
-            },
+            activeTools: { 'translate-words': false, 'translate-paragraphs': false },
             isToolsMenuOpen: false,
             currentUser: null,
             currentReadFileId: null,
+            currentBookmarks: [],
         };
+        
         const dom = {
             textContainer: document.getElementById('text-container'),
             toolsToggleBtn: document.getElementById('tools-toggle-btn'),
             toolsArrow: document.getElementById('tools-arrow'),
             toolsMenu: document.getElementById('tools-menu'),
-            toolItems: document.querySelectorAll('.tool-item'),
+            toolsMenuGrid: document.querySelector('#tools-menu .grid'),
             loader: document.getElementById('loader'),
             toast: document.getElementById('toast'),
             txtImporter: document.getElementById('txt-importer'),
+            pdfImporter: document.getElementById('pdf-importer'),
             authContainer: document.getElementById('auth-container'),
             splashScreen: document.getElementById('splash-screen'),
+            modalOverlay: document.getElementById('modal-overlay'),
+            wordPopup: document.getElementById('word-popup'),
+            fontStyleModal: document.getElementById('font-style-modal'),
         };
 
-        const showToast = (message) => { dom.toast.textContent = message; dom.toast.classList.remove('hidden'); setTimeout(() => dom.toast.classList.add('hidden'), 3000); };
+        const showToast = (message) => { dom.toast.textContent = message; dom.toast.classList.remove('hidden', 'fade-out'); dom.toast.classList.add('fade-in'); setTimeout(() => { dom.toast.classList.add('fade-out'); dom.toast.classList.remove('fade-in'); }, 2700); };
         const showLoader = () => dom.loader.classList.remove('hidden');
         const hideLoader = () => dom.loader.classList.add('hidden');
         const getPosColor = (pos = 'unknown') => ({'noun':'bg-green-100 text-green-800','verb':'bg-blue-100 text-blue-800','adjective':'bg-yellow-100 text-yellow-800','adverb':'bg-purple-100 text-purple-800'}[pos] || 'bg-slate-100 text-slate-800');
         const shuffleArray = (array) => array.sort(() => Math.random() - 0.5);
         const detectLanguage = (text) => /[\u0600-\u06FF]/.test(text) ? 'ar' : 'en';
         const debounce = (func, delay) => { let timeout; return (...args) => { clearTimeout(timeout); timeout = setTimeout(() => func(...args), delay); }; };
+        const splitIntoSentences = (text) => !text ? [] : text.replace(/([.?!])\s*(?=[A-Z\u0600-\u06FF])/g, "$1|").split("|").map(s => s.trim()).filter(s => s);
+        
+        const toolsData = [
+            { id: 'translate-words', name: 'ترجمة الكلمات', icon: `<path stroke-linecap="round" stroke-linejoin="round" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 002-2v-1a2 2 0 012-2h1.945M7.881 4.102A5.25 5.25 0 0112 3c2.757 0 5.093 2.054 5.25 4.757m-10.5 0A5.25 5.25 0 0012 21c2.757 0 5.093-2.054 5.25-4.757m-10.5 0h10.5" />` },
+            { id: 'translate-paragraphs', name: 'ترجمة الفقرات', icon: `<path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75" />` },
+            { id: 'font-style', name: 'نمط الخط', icon: `<path stroke-linecap="round" stroke-linejoin="round" d="M9.528 1.718a.75.75 0 01.162.819A8.97 8.97 0 009 6a9 9 0 009 9 8.97 8.97 0 003.463-.69a.75.75 0 01.981.981A10.503 10.503 0 0112 22.5a10.5 10.5 0 01-10.5-10.5c0-1.77.42-3.44 1.172-4.995a.75.75 0 01.819-.162z" /><path stroke-linecap="round" stroke-linejoin="round" d="M12 2.25a.75.75 0 01.75.75v10.5a.75.75 0 01-1.5 0V3a.75.75 0 01.75-.75z" />` },
+            { id: 'saved-words', name: 'الكلمات المضافة', icon: `<path stroke-linecap="round" stroke-linejoin="round" d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.5 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0111.186 0z" />` },
+            { id: 'read-files', name: 'المقروء', icon: `<path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />` },
+            { id: 'txt-importer', name: 'استيراد TXT', icon: `<path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m.75 12l3 3m0 0l3-3m-3 3v-6m-1.5-9H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />`, isLabel: true },
+            { id: 'pdf-importer', name: 'PDF → TXT', icon: `<path stroke-linecap="round" stroke-linejoin="round" d="M9 13.5l3 3m0 0l3-3m-3 3v-6m1.06-4.19l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z" />`, isLabel: true },
+            { id: 'quiz', name: 'اختبار الكلمات', icon: `<path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" />` },
+        ];
 
-        const splitIntoSentences = (text) => {
-            if (!text) return [];
-            return text.replace(/([.?!])\s*(?=[A-Z\u0600-\u06FF])/g, "$1|").split("|").map(s => s.trim()).filter(s => s);
-        };
+        function populateToolsMenu() {
+            dom.toolsMenuGrid.innerHTML = '';
+            toolsData.forEach(tool => {
+                const toolEl = document.createElement(tool.isLabel ? 'label' : 'div');
+                toolEl.className = 'tool-item group cursor-pointer';
+                toolEl.dataset.tool = tool.id;
+                if (tool.isLabel) toolEl.htmlFor = tool.id;
+                
+                toolEl.innerHTML = `
+                    <div class="p-3 bg-slate-100 rounded-xl group-hover:bg-teal-100 group-hover:scale-105 group-hover:shadow-md transition-all duration-200 text-slate-500 group-hover:text-teal-600">
+                         <svg class="w-8 h-8 mx-auto" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                            ${tool.icon}
+                         </svg>
+                    </div>
+                    <span class="mt-2 block text-xs font-semibold text-slate-600">${tool.name}</span>`;
+                dom.toolsMenuGrid.appendChild(toolEl);
+            });
+            dom.toolItems = document.querySelectorAll('.tool-item');
+        }
 
         async function translateText(text, targetLang, sourceLang) {
             if (!text || !text.trim()) return '';
-            showLoader();
             try {
                 const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${sourceLang}|${targetLang}`;
                 const response = await fetch(url);
                 if (!response.ok) throw new Error('Network error');
                 const data = await response.json();
                 return data.responseData.translatedText || text;
-            } catch (error) { showToast('حدث خطأ في الترجمة'); console.error(error); return text;
-            } finally { hideLoader(); }
+            } catch (error) {
+                showToast('حدث خطأ في الترجمة');
+                console.error("Translation API Error:", error);
+                return text;
+            }
         }
         
         function render() {
@@ -187,54 +291,43 @@
             }
         }
         
-        function renderText(text, bookmarkIndex = -1) {
+        async function renderText(text, autoBookmarkIndex = -1) {
             const detectedLang = detectLanguage(text);
             state.currentLang = detectedLang;
-            if (detectedLang === 'ar') {
-                state.originalText = text;
-                state.translatedText = ""; 
-            } else {
-                state.originalText = "";
-                state.translatedText = text;
-            }
+            state.originalText = (detectedLang === 'ar') ? text : "";
+            state.translatedText = (detectedLang === 'en') ? text : "";
             state.activeTools['translate-words'] = false;
             state.activeTools['translate-paragraphs'] = false;
+            
+            state.currentBookmarks = state.currentReadFileId ? await bookmarksDB.getByFile(state.currentReadFileId) : [];
+            
             render();
             
-            if (bookmarkIndex > -1) {
+            if (autoBookmarkIndex > -1) {
                  setTimeout(() => {
-                    const progressEl = document.querySelector(`#p-${bookmarkIndex}`);
-                    if (progressEl) {
-                        progressEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        progressEl.classList.add('bookmark-highlight');
-                        setTimeout(() => progressEl.classList.remove('bookmark-highlight'), 2500);
-                    }
+                    const progressEl = document.querySelector(`#p-${autoBookmarkIndex}`);
+                    if (progressEl) progressEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 }, 200);
             }
             
-            dom.toolItems.forEach(item => {
-                const tool = item.dataset.tool;
-                if (state.activeTools[tool] !== undefined) {
-                    item.querySelector('div')?.classList.remove('bg-sky-200');
-                }
-            });
+            dom.toolItems.forEach(item => item.classList.remove('active-tool'));
         }
 
         function renderAuthState() {
             if (state.currentUser) {
                 dom.authContainer.innerHTML = `
                     <div class="flex items-center gap-3">
-                        <img src="${state.currentUser.photoURL}" alt="user" class="w-10 h-10 rounded-full">
+                        <img src="${state.currentUser.photoURL}" alt="user" class="w-10 h-10 rounded-full border-2 border-slate-200">
                         <div>
-                            <span class="font-semibold text-sm">${state.currentUser.displayName}</span>
-                            <button id="logout-btn" class="block text-xs text-red-500 hover:underline">تسجيل الخروج</button>
+                            <span class="font-bold text-sm text-slate-700">${state.currentUser.displayName}</span>
+                            <button id="logout-btn" class="block text-xs text-red-500 hover:underline font-semibold">تسجيل الخروج</button>
                         </div>
                     </div>`;
                 dom.authContainer.querySelector('#logout-btn').onclick = () => auth.signOut();
                 dom.toolsToggleBtn.disabled = false;
                 dom.toolsToggleBtn.classList.remove('opacity-50', 'cursor-not-allowed');
             } else {
-                dom.authContainer.innerHTML = `<button id="login-btn" class="auth-btn bg-sky-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-sky-600">تسجيل الدخول بـ Google</button>`;
+                dom.authContainer.innerHTML = `<button id="login-btn" class="auth-btn bg-teal-600 text-white font-bold py-2 px-5 rounded-lg hover:bg-teal-700 transition-colors shadow-sm hover:shadow-md">تسجيل الدخول بـ Google</button>`;
                 dom.authContainer.querySelector('#login-btn').onclick = () => {
                     const provider = new firebase.auth.GoogleAuthProvider();
                     auth.signInWithPopup(provider).catch(err => showToast(`خطأ في تسجيل الدخول: ${err.message}`));
@@ -244,15 +337,17 @@
             }
         }
         
-        auth.onAuthStateChanged(user => {
+        auth.onAuthStateChanged(async user => {
             showLoader();
             if (user) {
                 state.currentUser = { uid: user.uid, displayName: user.displayName, photoURL: user.photoURL, email: user.email };
-                if (dom.textContainer.innerText.trim() === "تم تسجيل الخروج. قم بتسجيل الدخول للبدء." || dom.textContainer.innerText.trim() === "") {
-                    state.originalText = `أهلاً بك ${user.displayName}! يمكنك الآن استخدام الأدوات أو استيراد ملف نصي.`;
+                if (!dom.textContainer.innerText.trim() || dom.textContainer.innerText.trim() === "تم تسجيل الخروج. قم بتسجيل الدخول للبدء.") {
+                    state.originalText = `أهلاً بك ${user.displayName}!`;
                 }
-                state.translatedText = "";
                 showToast(`تم تسجيل الدخول بنجاح`);
+                if (state.currentReadFileId) {
+                    state.currentBookmarks = await bookmarksDB.getByFile(state.currentReadFileId);
+                }
             } else {
                 state.currentUser = null;
                 state.originalText = "تم تسجيل الخروج. قم بتسجيل الدخول للبدء.";
@@ -260,6 +355,7 @@
                 state.currentLang = 'ar';
                 state.currentReadFileId = null;
                 state.activeTools = { 'translate-words': false, 'translate-paragraphs': false };
+                state.currentBookmarks = [];
                 if (state.isToolsMenuOpen) toggleToolsMenu();
             }
             renderAuthState();
@@ -269,15 +365,11 @@
 
         function activateTool(toolName) {
             toggleToolsMenu();
-            if (toolName === 'epub-converter') {
-                showToast('هذه الميزة قيد التطوير حالياً.');
-                return;
-            }
-            const modalTools = ['saved-words', 'quiz', 'read-files']; 
+            const modalTools = ['saved-words', 'quiz', 'read-files', 'font-style']; 
             const textTools = ['translate-words', 'translate-paragraphs'];
 
             if (modalTools.includes(toolName)) {
-                if (modals[toolName]) modals[toolName].show();
+                modals[toolName]?.show();
                 return;
             }
             if (textTools.includes(toolName)) {
@@ -287,7 +379,7 @@
             dom.toolItems.forEach(item => {
                 const tool = item.dataset.tool;
                 if (state.activeTools[tool] !== undefined) {
-                    item.querySelector('div')?.classList.toggle('bg-sky-200', state.activeTools[tool]);
+                    item.classList.toggle('active-tool', state.activeTools[tool]);
                 }
             });
             render();
@@ -305,22 +397,29 @@
             dom.textContainer.contentEditable = false;
             dom.textContainer.innerHTML = '';
             
+            const fragment = document.createDocumentFragment();
             const sentences = splitIntoSentences(textToRender);
             
             sentences.forEach((sentenceText, index) => {
                 const pWrap = document.createElement('div');
-                pWrap.className = 'mb-4';
+                pWrap.className = 'paragraph-wrap';
                 pWrap.id = `p-${index}`;
 
+                const icon = document.createElement('button');
+                icon.className = 'bookmark-icon';
+                icon.title = 'إشارة مرجعية';
+                icon.dataset.paragraphIndex = index;
+                icon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" /></svg>`;
+                
                 const pElem = document.createElement('p');
+                pElem.className = 'inline';
                 
                 if (state.activeTools['translate-words']) {
                     sentenceText.split(/(\s+)/).forEach(word => {
                         if (word.trim()) {
                             const span = document.createElement('span');
                             span.textContent = word;
-                            span.className = 'cursor-pointer hover:bg-sky-100 rounded';
-                            span.onclick = () => modals.wordPopup.show(word.trim());
+                            span.className = 'word-span cursor-pointer hover:bg-teal-100 rounded';
                             pElem.appendChild(span);
                         } else {
                             pElem.appendChild(document.createTextNode(word));
@@ -329,24 +428,34 @@
                 } else {
                     pElem.textContent = sentenceText;
                 }
+                
+                pWrap.appendChild(icon);
                 pWrap.appendChild(pElem);
 
                 if (state.activeTools['translate-paragraphs']) {
                     const btn = document.createElement('button');
-                    btn.className = 'text-sm text-sky-600 hover:text-sky-800 mt-1 font-semibold';
-                    btn.textContent = 'ترجمة الجملة';
+                    btn.className = 'text-sm text-teal-600 hover:text-teal-800 mt-2 font-semibold flex items-center gap-1.5 transition-colors';
+                    btn.dataset.sentence = sentenceText;
+                    btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 5h12M9 3v2m4 13-4-4M19 17v-2a4 4 0 00-4-4H9M19 17h-2a4 4 0 00-4 4v2M19 17a4 4 0 01-4 4h-2" /></svg> <span>ترجمة الجملة</span>`;
+                    
                     const transDiv = document.createElement('div');
-                    transDiv.className = 'mt-2 p-3 bg-sky-50 text-sky-900 border-r-4 border-sky-300 rounded-lg hidden';
-                    btn.onclick = async () => {
-                        if (transDiv.classList.toggle('hidden')) return;
-                        const sourceLang = detectLanguage(sentenceText);
-                        const targetLang = sourceLang === 'ar' ? 'en' : 'ar';
-                        transDiv.textContent = 'جاري الترجمة...';
-                        transDiv.textContent = await translateText(sentenceText, targetLang, sourceLang);
-                    };
+                    transDiv.className = 'translation-output mt-2 p-4 bg-teal-50 text-teal-900 border-r-4 border-teal-200 rounded-md hidden leading-relaxed';
+                    
                     pWrap.append(btn, transDiv);
                 }
-                dom.textContainer.appendChild(pWrap);
+                fragment.appendChild(pWrap);
+            });
+            
+            dom.textContainer.appendChild(fragment);
+            applyBookmarksToDOM();
+        }
+        
+        function applyBookmarksToDOM() {
+            if (!state.currentReadFileId) return;
+            document.querySelectorAll('.bookmark-icon').forEach(icon => icon.classList.remove('active'));
+            state.currentBookmarks.forEach(bookmark => {
+                const icon = document.querySelector(`.bookmark-icon[data-paragraph-index="${bookmark.paragraphIndex}"]`);
+                if (icon) icon.classList.add('active');
             });
         }
 
@@ -357,38 +466,50 @@
             dom.toolsArrow.classList.toggle('rotate-180', state.isToolsMenuOpen);
         }
 
+        const debouncedShowWordPopup = debounce((word) => {
+            modals.wordPopup.show(word);
+        }, 300);
+
         const modals = {
             wordPopup: {
-                element: document.getElementById('word-popup'),
                 show: async function(word) {
                     const sourceLang = detectLanguage(word);
                     const targetLang = sourceLang === 'ar' ? 'en' : 'ar';
-                    this.element.innerHTML = `<div class="p-4 text-center">جاري ترجمة "${word}"...</div>`;
-                    this.element.classList.remove('hidden', 'slide-down');
-                    this.element.classList.add('slide-up');
-                    const translation = await translateText(word, targetLang, sourceLang);
-                    const pos = await this.getWordInfo(word);
-                    this.element.innerHTML = `
-                        <div class="flex justify-between items-start">
-                            <div>
-                                <h3 class="text-2xl font-bold">${word}</h3>
-                                <p class="text-xl text-slate-600">${translation}</p>
-                                <span class="text-sm font-semibold px-2 py-1 rounded-full mt-2 inline-block ${getPosColor(pos)}">${pos}</span>
+                    dom.wordPopup.innerHTML = `<div class="bg-white p-6 shadow-2xl rounded-t-2xl"><div class="p-4 text-center text-slate-500">جاري تحميل \"${word}\"...</div></div>`;
+                    dom.wordPopup.classList.remove('hidden');
+
+                    const [translation, pos] = await Promise.all([
+                        translateText(word, targetLang, sourceLang),
+                        this.getWordInfo(word.trim().replace(/[.,!?\"]/g, ''))
+                    ]);
+                    
+                    dom.wordPopup.innerHTML = `
+                        <div class="bg-white p-5 pt-6 shadow-2xl rounded-t-3xl">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <h3 class="text-3xl font-extrabold text-slate-800">${word}</h3>
+                                    <p class="text-2xl text-teal-600 font-medium">${translation || word}</p>
+                                    <span class="text-sm font-semibold px-2.5 py-1 rounded-full mt-3 inline-block ${getPosColor(pos)}">${pos}</span>
+                                </div>
+                                <button id="add-word-btn" title="حفظ الكلمة" class="w-14 h-14 flex-shrink-0 flex items-center justify-center rounded-full transition-all duration-200 ${!state.currentUser ? 'bg-slate-200 text-slate-400 cursor-not-allowed' : 'bg-teal-600 text-white hover:bg-teal-700 hover:scale-110'}">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" /></svg>
+                                </button>
                             </div>
-                            <button id="add-word-btn" class="text-4xl ${!state.currentUser ? 'text-slate-300 cursor-not-allowed' : 'text-sky-500 hover:text-sky-700'} p-2 rounded-full hover:bg-slate-100 w-12 h-12 flex items-center justify-center">+</button>
                         </div>`;
                     document.getElementById('add-word-btn').onclick = () => {
                         if (!state.currentUser) { showToast('يجب تسجيل الدخول لحفظ الكلمات'); return; }
                         const wordToSave = sourceLang === 'en' ? { word, translation, pos } : { word: translation, translation: word, pos:'N/A' };
                         savedWordsDB.save(wordToSave).then(saved => {
-                           showToast(saved ? `تم حفظ "${wordToSave.word}"` : 'الكلمة محفوظة بالفعل');
+                           showToast(saved ? `تم حفظ \"${wordToSave.word}\"` : 'الكلمة محفوظة بالفعل');
+                           if(saved) this.hide();
                         });
                     };
                 },
-                hide: function() { this.element.classList.add('slide-down'); },
+                hide: function() { dom.wordPopup.classList.add('hidden'); },
+
                 getWordInfo: async (word) => {
                     try {
-                        const response = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${word.toLowerCase().replace(/[.,!?"']/g, '')}`);
+                        const response = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${word.toLowerCase().replace(/[.,!?\"]/g, '')}`);
                         if (!response.ok) return 'unknown';
                         const data = await response.json();
                         if (data && data.length > 0 && data[0].meanings) {
@@ -402,37 +523,28 @@
                         }
                         return 'unknown';
                     } catch (error) { 
-                        console.error("Error fetching word info:", error);
+                        console.error("Error fetching word info:", error); 
                         return 'unknown'; 
                     }
                 }
             },
             'saved-words': {
                 element: document.getElementById('saved-words-modal'),
-                init: function() {
-                    this.element.innerHTML = `
-                        <div class="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[80vh] flex flex-col fade-in">
-                            <div class="p-4 border-b flex justify-between items-center"><h3 class="text-xl font-bold">الكلمات المحفوظة</h3><button id="close-saved-words-btn" class="text-slate-500 hover:text-slate-800 text-3xl">&times;</button></div>
-                            <div id="saved-words-list" class="flex-1 overflow-y-auto p-4 space-y-3"></div>
-                        </div>`;
-                    this.element.querySelector('#close-saved-words-btn').onclick = () => this.hide();
-                    this.element.onclick = (e) => { if (e.target === this.element) this.hide(); };
-                },
                 show: async function() {
-                    const listEl = this.element.querySelector('#saved-words-list');
-                    listEl.innerHTML = '<p class="text-slate-500 text-center py-8">جاري التحميل...</p>';
+                    dom.modalOverlay.classList.remove('hidden');
+                    this.element.innerHTML = `<div class="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[85vh] flex flex-col slide-up-fade"><div class="p-5 border-b flex justify-between items-center flex-shrink-0"><h3 class="text-xl font-bold">الكلمات المحفوظة</h3><button id="close-saved-words-btn" class="text-slate-400 hover:text-slate-800 text-4xl font-light">&times;</button></div><div id="saved-words-list" class="flex-1 overflow-y-auto p-5 space-y-3"><p class="text-slate-500 text-center py-8">جاري التحميل...</p></div></div>`;
+                    this.element.querySelector('#close-saved-words-btn').onclick = () => this.hide();
                     this.element.classList.remove('hidden');
                     const words = await savedWordsDB.get();
+                    const listEl = this.element.querySelector('#saved-words-list');
                     listEl.innerHTML = '';
                     if (words.length === 0) {
-                        listEl.innerHTML = `<p class="text-slate-500 text-center py-8">لا توجد كلمات محفوظة.</p>`;
+                        listEl.innerHTML = `<div class="text-center py-12"><svg class="w-16 h-16 mx-auto text-slate-300" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" /></svg><p class="text-slate-500 mt-4">لا توجد كلمات محفوظة.</p></div>`;
                     } else {
                         words.forEach(word => {
                             const wordEl = document.createElement('div');
-                            wordEl.className = 'bg-slate-50 p-3 rounded-lg flex justify-between items-center';
-                            wordEl.innerHTML = `
-                                <div><p class="font-bold">${word.word} <span class="font-normal text-slate-500">→ ${word.translation}</span></p><span class="text-xs font-semibold px-2 py-0.5 rounded-full mt-1 inline-block ${getPosColor(word.pos)}">${word.pos}</span></div>
-                                <button data-id="${word.id}" class="delete-word-btn text-red-500 hover:text-red-700 p-2 rounded-full hover:bg-red-100"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z"></path></svg></button>`;
+                            wordEl.className = 'bg-slate-50 p-4 rounded-lg flex justify-between items-center transition-all duration-300 hover:shadow-md hover:scale-[1.02]';
+                            wordEl.innerHTML = `<div><p class="font-bold text-lg text-slate-800">${word.word} <span class="font-medium text-slate-500">→ ${word.translation}</span></p><span class="text-xs font-semibold px-2 py-0.5 rounded-full mt-1 inline-block ${getPosColor(word.pos)}">${word.pos}</span></div><button data-id="${word.id}" class="delete-word-btn text-red-400 hover:text-red-600 p-2 rounded-full hover:bg-red-100 transition-colors"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clip-rule="evenodd"></path></svg></button>`;
                             listEl.appendChild(wordEl);
                         });
                         listEl.querySelectorAll('.delete-word-btn').forEach(btn => {
@@ -446,51 +558,29 @@
                         });
                     }
                 },
-                hide: function() { this.element.classList.add('hidden'); }
+                hide: function() { this.element.classList.add('hidden'); dom.modalOverlay.classList.add('hidden'); }
             },
             'read-files': {
                 element: document.getElementById('read-files-modal'),
-                init: function() {
-                    this.element.innerHTML = `
-                        <div class="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[80vh] flex flex-col fade-in">
-                            <div class="p-4 border-b flex justify-between items-center"><h3 class="text-xl font-bold">ملفاتي المقروءة</h3><button id="close-read-files-btn" class="text-slate-500 hover:text-slate-800 text-3xl">&times;</button></div>
-                            <div id="read-files-list" class="flex-1 overflow-y-auto p-4 space-y-3"></div>
-                        </div>`;
-                    this.element.querySelector('#close-read-files-btn').onclick = () => this.hide();
-                    this.element.onclick = (e) => { if (e.target === this.element) this.hide(); };
-                },
                 show: async function() {
-                    const listEl = this.element.querySelector('#read-files-list');
-                    listEl.innerHTML = '<p class="text-slate-500 text-center py-8">جاري تحميل ملفاتك...</p>';
+                    dom.modalOverlay.classList.remove('hidden');
+                    this.element.innerHTML = `<div class="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[85vh] flex flex-col slide-up-fade"><div class="p-5 border-b flex justify-between items-center flex-shrink-0"><h3 class="text-xl font-bold">ملفاتي المقروءة</h3><button id="close-read-files-btn" class="text-slate-400 hover:text-slate-800 text-4xl font-light">&times;</button></div><div id="read-files-list" class="flex-1 overflow-y-auto p-5 space-y-3"><p class="text-slate-500 text-center py-8">جاري تحميل ملفاتك...</p></div></div>`;
+                    this.element.querySelector('#close-read-files-btn').onclick = () => this.hide();
                     this.element.classList.remove('hidden');
+
                     const files = await readFilesDB.get();
+                    const listEl = this.element.querySelector('#read-files-list');
                     listEl.innerHTML = '';
                     if (files.length === 0) {
-                        listEl.innerHTML = '<p class="text-slate-500 text-center py-8">لم تقم باستيراد أي ملفات نصية بعد.</p>';
+                        listEl.innerHTML = `<div class="text-center py-12"><svg class="w-16 h-16 mx-auto text-slate-300" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" /></svg><p class="text-slate-500 mt-4">لم تقم باستيراد أي ملفات بعد.</p></div>`;
                     } else {
                         files.forEach(file => {
                             const progress = file.progress || 0;
                             const total = file.totalParagraphs || 1;
                             const percentage = Math.floor(Math.min(100, (progress / Math.max(1, total - 1)) * 100));
-                            let progressColor = 'bg-red-500';
-                            if (percentage > 99) progressColor = 'bg-green-500';
-                            else if (percentage > 30) progressColor = 'bg-yellow-500';
                             const fileEl = document.createElement('div');
-                            fileEl.className = 'bg-slate-50 p-3 rounded-lg flex flex-col';
-                            fileEl.innerHTML = `
-                                <div class="flex justify-between items-start w-full">
-                                    <div class="cursor-pointer flex-1" data-id="${file.id}">
-                                        <p class="font-bold">${file.name}</p>
-                                        <p class="text-xs text-slate-500">آخر قراءة: ${new Date(file.lastRead.toDate()).toLocaleString()}</p>
-                                    </div>
-                                    <button data-id="${file.id}" class="delete-file-btn text-red-500 hover:text-red-700 p-2 rounded-full hover:bg-red-100"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z"></path></svg></button>
-                                </div>
-                                <div class="mt-2 w-full">
-                                    ${percentage > 99 ? '<p class="text-green-600 font-bold text-center text-sm">Congratulations!</p>' : ''}
-                                    <div class="w-full bg-slate-200 rounded-full h-2.5">
-                                        <div class="${progressColor} h-2.5 rounded-full" style="width: ${percentage}%"></div>
-                                    </div>
-                                </div>`;
+                            fileEl.className = 'bg-slate-50 p-4 rounded-lg flex flex-col transition-all duration-300 hover:shadow-md hover:scale-[1.02]';
+                            fileEl.innerHTML = `<div class="flex justify-between items-start w-full"><div class="cursor-pointer flex-1 pr-4" data-id="${file.id}"><p class="font-bold text-slate-800">${file.name}</p><p class="text-xs text-slate-500">آخر قراءة: ${new Date(file.lastRead.toDate()).toLocaleString()}</p></div><button data-id="${file.id}" title="حذف الملف" class="delete-file-btn text-red-400 hover:text-red-600 p-2 rounded-full hover:bg-red-100 transition-colors flex-shrink-0"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clip-rule="evenodd"></path></svg></button></div><div class="mt-3 w-full"><div class="flex justify-between mb-1"><span class="text-xs font-medium text-teal-700">${percentage > 99 ? 'مكتمل!' : `تقدم القراءة`}</span><span class="text-xs font-medium text-teal-700">${percentage}%</span></div><div class="w-full bg-slate-200 rounded-full h-2.5"><div class="bg-teal-500 h-2.5 rounded-full transition-all duration-500" style="width: ${percentage}%"></div></div></div>`;
                             fileEl.querySelector('.cursor-pointer').onclick = async () => {
                                 this.hide();
                                 showLoader();
@@ -502,29 +592,28 @@
                                 }
                             };
                             fileEl.querySelector('.delete-file-btn').onclick = async () => {
-                                if(confirm(`هل أنت متأكد من حذف ملف "${file.name}"؟`)) {
+                                showConfirmationModal(`هل أنت متأكد من حذف ملف "${file.name}"؟`, async () => {
                                     await readFilesDB.delete(file.id);
                                     showToast("تم حذف الملف");
                                     this.show();
-                                }
+                                });
                             };
                             listEl.appendChild(fileEl);
                         });
                     }
                 },
-                hide: function() { this.element.classList.add('hidden'); }
+                hide: function() { this.element.classList.add('hidden'); dom.modalOverlay.classList.add('hidden'); }
             },
             'quiz': {
                 element: document.getElementById('quiz-modal'),
                 state: { questions: [], current: 0, score: 0, incorrect: [] },
-                init: function() {},
                 show: async function(words = null) {
                     const wordsToTest = words || await savedWordsDB.get();
                     if (wordsToTest.length < 4) { showToast('يجب إضافة 4 كلمات على الأقل لبدء الاختبار.'); return; }
                     this.state = { questions: shuffleArray([...wordsToTest]), current: 0, score: 0, incorrect: [] };
-                    this.element.classList.remove('hidden'); this.renderQuestion();
+                    this.element.classList.remove('hidden'); this.element.classList.add('fade-in'); this.renderQuestion();
                 },
-                hide: function() { this.element.classList.add('hidden'); },
+                hide: function() { this.element.classList.add('hidden'); this.element.classList.remove('fade-in'); },
                 renderQuestion: async function() {
                     if (this.state.current >= this.state.questions.length) { this.renderResult(); return; }
                     const questionData = this.state.questions[this.state.current];
@@ -538,15 +627,7 @@
                         question = questionData.translation; correctAnswer = questionData.word;
                         choices = this.generateChoices(allWords, 'word', correctAnswer, questionData.translation);
                     }
-                    this.element.innerHTML = `
-                        <div class="w-full max-w-2xl mx-auto flex-1 flex flex-col">
-                            <div class="flex justify-between items-center mb-4"><h2 class="text-xl font-bold text-slate-700">اختبار الكلمات</h2><button id="close-quiz-btn" class="text-slate-500 hover:text-slate-800 text-3xl">&times;</button></div>
-                            <div class="bg-white rounded-xl shadow-md p-6 flex-1 flex flex-col justify-center">
-                                <div class="text-center mb-8"><p class="text-slate-500 mb-2">ما هي ترجمة الكلمة التالية؟</p><h3 class="text-4xl font-bold text-sky-600">${question}</h3></div>
-                                <div class="grid grid-cols-2 gap-4">${choices.map(c => `<button class="quiz-choice-btn p-4 bg-slate-100 rounded-lg text-lg font-semibold hover:bg-sky-100">${c}</button>`).join('')}</div>
-                            </div>
-                            <div class="text-center mt-4 text-lg font-semibold text-slate-500">${this.state.current + 1} / ${this.state.questions.length}</div>
-                        </div>`;
+                    this.element.innerHTML = `<div class="w-full max-w-2xl mx-auto flex-1 flex flex-col py-4 slide-up-fade"><div class="flex justify-between items-center mb-4 flex-shrink-0"><h2 class="text-xl font-bold text-slate-700">اختبار الكلمات</h2><button id="close-quiz-btn" class="text-slate-500 hover:text-slate-800 text-4xl font-light">&times;</button></div><div class="bg-white rounded-2xl shadow-lg p-6 sm:p-8 flex-1 flex flex-col justify-center"><div class="text-center mb-8"><p class="text-slate-500 mb-2 font-medium">ما هي ترجمة الكلمة التالية؟</p><h3 class="text-4xl sm:text-5xl font-extrabold text-teal-600">${question}</h3></div><div class="grid grid-cols-1 sm:grid-cols-2 gap-4">${choices.map(c => `<button class="quiz-choice-btn p-4 bg-slate-100 rounded-lg text-lg font-semibold hover:bg-teal-100 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-teal-400 focus:ring-offset-2 transition-all">${c}</button>`).join('')}</div></div><div class="text-center mt-4 text-lg font-semibold text-slate-500 flex-shrink-0">${this.state.current + 1} / ${this.state.questions.length}</div></div>`;
                     this.element.querySelector('#close-quiz-btn').onclick = () => this.hide();
                     this.element.querySelectorAll('.quiz-choice-btn').forEach(btn => { btn.onclick = () => this.handleAnswer(btn, btn.textContent, correctAnswer, questionData); });
                 },
@@ -555,7 +636,7 @@
                      let wrongAnswers = allWords.filter(w => w[field] !== correctAnswer && w.word !== sourceWord && w.translation !== sourceWord);
                      wrongAnswers = shuffleArray(wrongAnswers);
                      for (let i = 0; i < Math.min(3, wrongAnswers.length); i++) { choices.push(wrongAnswers[i][field]); }
-                     while (choices.length < 4) { choices.push(`خيار ${choices.length}`); }
+                     while (choices.length < 4) { choices.push(`خيار وهمي ${choices.length}`); }
                      return shuffleArray(choices);
                 },
                 handleAnswer: function(btn, selectedAnswer, correctAnswer, questionData) {
@@ -570,52 +651,111 @@
                 },
                 renderResult: function() {
                     const score = this.state.score; const total = this.state.questions.length; const incorrectCount = this.state.incorrect.length;
-                    this.element.innerHTML = `
-                         <div class="w-full max-w-2xl mx-auto flex-1 flex flex-col justify-center text-center">
-                            <div class="bg-white rounded-xl shadow-md p-8">
-                                <h2 class="text-3xl font-bold mb-2">انتهى الاختبار!</h2>
-                                <p class="text-xl text-slate-600 mb-6">نتيجتك هي:</p>
-                                <p class="text-6xl font-bold text-sky-600 mb-8">${score} <span class="text-4xl text-slate-400">/ ${total}</span></p>
-                                ${incorrectCount > 0 ? `<button id="retest-btn" class="w-full mb-4 bg-yellow-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-yellow-600">إعادة اختبار ${incorrectCount} كلمات خاطئة</button>` : ''}
-                                <button id="close-result-btn" class="w-full bg-slate-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-slate-600">العودة للرئيسية</button>
-                            </div>
-                        </div>`;
+                    this.element.innerHTML = `<div class="w-full max-w-2xl mx-auto flex-1 flex flex-col justify-center text-center p-4"><div class="bg-white rounded-2xl shadow-xl p-8 slide-up-fade"><h2 class="text-3xl font-bold mb-2">انتهى الاختبار!</h2><p class="text-xl text-slate-600 mb-6">نتيجتك هي:</p><p class="text-7xl font-extrabold text-teal-600 mb-8">${score} <span class="text-4xl text-slate-400 font-bold">/ ${total}</span></p>${incorrectCount > 0 ? `<button id="retest-btn" class="w-full mb-4 bg-yellow-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-yellow-600 transition-all">إعادة اختبار ${incorrectCount} كلمات خاطئة</button>` : ''}<button id="close-result-btn" class="w-full bg-slate-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-slate-600 transition-all">العودة للرئيسية</button></div></div>`;
                     if (incorrectCount > 0) { this.element.querySelector('#retest-btn').onclick = () => this.show(this.state.incorrect); }
                     this.element.querySelector('#close-result-btn').onclick = () => this.hide();
                 }
             },
+            'font-style': {
+                element: dom.fontStyleModal,
+                show: function() {
+                    const fonts = [
+                        { name: 'Tajawal', family: "'Tajawal', sans-serif" },
+                        { name: 'Cairo', family: "'Cairo', sans-serif" },
+                        { name: 'Roboto', family: "'Roboto', sans-serif" },
+                        { name: 'Merriweather', family: "'Merriweather', serif" },
+                        { name: 'Times New Roman', family: "'Times New Roman', serif" },
+                    ];
+                    
+                    const fontOptionsHTML = fonts.map(font => {
+                        const isSelected = dom.textContainer.style.fontFamily === font.family;
+                        return `<button data-font="${font.family}" class="font-option w-full text-lg p-3 rounded-lg text-slate-700 transition-colors ${isSelected ? 'bg-teal-500 text-white' : 'hover:bg-slate-100'}" style="font-family: ${font.family};">
+                            ${font.name}
+                        </button>`;
+                    }).join('');
+
+                    this.element.innerHTML = `
+                        <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm flex flex-col slide-up-fade">
+                            <div class="p-5 border-b flex justify-between items-center flex-shrink-0">
+                                <h3 class="text-xl font-bold">اختر نمط الخط</h3>
+                                <button id="close-font-style-btn" class="text-slate-400 hover:text-slate-800 text-4xl font-light">&times;</button>
+                            </div>
+                            <div id="font-style-list" class="flex-1 overflow-y-auto p-4 space-y-2">
+                                ${fontOptionsHTML}
+                            </div>
+                        </div>`;
+                    
+                    this.element.querySelector('#close-font-style-btn').onclick = () => this.hide();
+                    this.element.classList.remove('hidden');
+                    dom.modalOverlay.classList.remove('hidden');
+
+                    this.element.querySelectorAll('.font-option').forEach(btn => {
+                        btn.onclick = () => {
+                            dom.textContainer.style.fontFamily = btn.dataset.font;
+                            this.hide();
+                        };
+                    });
+                },
+                hide: function() {
+                    this.element.classList.add('hidden');
+                    dom.modalOverlay.classList.add('hidden');
+                }
+            }
         };
 
         const savedWordsDB = {
-            get: async () => { if (!state.currentUser) return []; try { const snapshot = await db.collection('users').doc(state.currentUser.uid).collection('words').orderBy('createdAt', 'desc').get(); return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })); } catch (error) { showToast('خطأ في جلب الكلمات'); console.error(error); return []; } },
-            save: async (wordData) => { if (!state.currentUser) return false; const wordsCollection = db.collection('users').doc(state.currentUser.uid).collection('words'); const query = await wordsCollection.where('word', '==', wordData.word.toLowerCase()).get(); if (!query.empty) return false; try { await wordsCollection.add({ ...wordData, word: wordData.word.toLowerCase(), createdAt: firebase.firestore.FieldValue.serverTimestamp() }); return true; } catch (error) { showToast('خطأ في حفظ الكلمة'); console.error(error); return false; } },
-            delete: async (wordId) => { if (!state.currentUser) return; try { await db.collection('users').doc(state.currentUser.uid).collection('words').doc(wordId).delete(); } catch (error) { showToast('خطأ في حذف الكلمة'); console.error(error); } }
+            get: async () => { if (!state.currentUser) return []; try { const snapshot = await db.collection('users').doc(state.currentUser.uid).collection('words').orderBy('createdAt', 'desc').get(); return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })); } catch (error) { showToast('خطأ في جلب الكلمات'); return []; } },
+            save: async (wordData) => { if (!state.currentUser) return false; const wordsCollection = db.collection('users').doc(state.currentUser.uid).collection('words'); const query = await wordsCollection.where('word', '==', wordData.word.toLowerCase()).get(); if (!query.empty) return false; try { await wordsCollection.add({ ...wordData, word: wordData.word.toLowerCase(), createdAt: firebase.firestore.FieldValue.serverTimestamp() }); return true; } catch (error) { showToast('خطأ في حفظ الكلمة'); return false; } },
+            delete: async (wordId) => { if (!state.currentUser) return; try { await db.collection('users').doc(state.currentUser.uid).collection('words').doc(wordId).delete(); } catch (error) { showToast('خطأ في حذف الكلمة'); } }
         };
+
         const readFilesDB = {
-            get: async () => { if (!state.currentUser) return []; try { const snapshot = await db.collection('users').doc(state.currentUser.uid).collection('readFiles').orderBy('lastRead', 'desc').get(); return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })); } catch (error) { showToast('خطأ في جلب الملفات'); console.error(error); return []; } },
-            getContent: async (fileId) => { if (!state.currentUser) return null; try { const doc = await db.collection('users').doc(state.currentUser.uid).collection('readFiles').doc(fileId).get(); return doc.exists ? doc.data() : null; } catch (error) { showToast('خطأ في تحميل محتوى الملف'); console.error(error); return null; } },
+            get: async () => { if (!state.currentUser) return []; try { const snapshot = await db.collection('users').doc(state.currentUser.uid).collection('readFiles').orderBy('lastRead', 'desc').get(); return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })); } catch (error) { showToast('خطأ في جلب الملفات'); return []; } },
+            getContent: async (fileId) => { if (!state.currentUser) return null; try { const doc = await db.collection('users').doc(state.currentUser.uid).collection('readFiles').doc(fileId).get(); return doc.exists ? doc.data() : null; } catch (error) { showToast('خطأ في تحميل محتوى الملف'); return null; } },
             save: async (fileName, content) => {
                 if (!state.currentUser) return null;
                 const filesCollection = db.collection('users').doc(state.currentUser.uid).collection('readFiles');
                 const query = await filesCollection.where('name', '==', fileName).limit(1).get();
-                const totalParagraphs = splitIntoSentences(content).length;
-                const fileData = { name: fileName, content: content, progress: 0, totalParagraphs: totalParagraphs, lastRead: firebase.firestore.FieldValue.serverTimestamp() };
-
+                const fileData = { name: fileName, content: content, progress: 0, totalParagraphs: splitIntoSentences(content).length, lastRead: firebase.firestore.FieldValue.serverTimestamp() };
                 if (!query.empty) {
                     const docId = query.docs[0].id;
-                    try {
-                        await filesCollection.doc(docId).update(fileData);
-                        return docId;
-                    } catch (error) { showToast('خطأ في تحديث الملف'); console.error(error); return null; }
+                    await filesCollection.doc(docId).update(fileData);
+                    return docId;
                 } else {
-                    try {
-                        const docRef = await filesCollection.add({ ...fileData, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
-                        return docRef.id;
-                    } catch (error) { showToast('خطأ في حفظ الملف'); console.error(error); return null; }
+                    const docRef = await filesCollection.add({ ...fileData, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+                    return docRef.id;
                 }
             },
             updateProgress: async (fileId, progressIndex) => { if (!state.currentUser || !fileId) return; try { await db.collection('users').doc(state.currentUser.uid).collection('readFiles').doc(fileId).update({ progress: progressIndex, lastRead: firebase.firestore.FieldValue.serverTimestamp() }); } catch (error) { console.error("Error updating progress:", error); } },
-            delete: async (fileId) => { if (!state.currentUser) return; try { await db.collection('users').doc(state.currentUser.uid).collection('readFiles').doc(fileId).delete(); } catch (error) { showToast('خطأ في حذف الملف'); console.error(error); } }
+            delete: async (fileId) => { if (!state.currentUser) return; try { await db.collection('users').doc(state.currentUser.uid).collection('readFiles').doc(fileId).delete(); } catch (error) { showToast('خطأ في حذف الملف'); } }
+        };
+
+        const bookmarksDB = {
+            getByFile: async (fileId) => { if (!state.currentUser || !fileId) return []; try { const snapshot = await db.collection('users').doc(state.currentUser.uid).collection('bookmarks').where('fileId','==',fileId).orderBy('createdAt','asc').get(); return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })); } catch (error) { console.error('خطأ في جلب العلامات:', error); return []; } },
+            save: async (bookmark) => { if (!state.currentUser) return null; try { const docRef = await db.collection('users').doc(state.currentUser.uid).collection('bookmarks').add({ ...bookmark, createdAt: firebase.firestore.FieldValue.serverTimestamp() }); return docRef.id; } catch (error) { console.error('خطأ في حفظ العلامة:', error); return null; } },
+            delete: async (bookmarkId) => { if (!state.currentUser) return; try { await db.collection('users').doc(state.currentUser.uid).collection('bookmarks').doc(bookmarkId).delete(); } catch (error) { console.error('خطأ في حذف العلامة:', error); } }
+        };
+        
+        const showConfirmationModal = (message, onConfirm) => {
+            const confirmModal = document.createElement('div');
+            confirmModal.className = 'fixed inset-0 bg-black/50 backdrop-blur-sm z-[150] flex items-center justify-center p-4';
+            confirmModal.innerHTML = `
+                <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 text-center slide-up-fade">
+                    <p class="text-lg font-medium text-slate-700 mb-6">${message}</p>
+                    <div class="flex justify-center gap-4">
+                        <button id="confirm-cancel" class="px-6 py-2 rounded-lg bg-slate-200 text-slate-700 font-semibold hover:bg-slate-300 transition-colors">إلغاء</button>
+                        <button id="confirm-ok" class="px-6 py-2 rounded-lg bg-red-500 text-white font-semibold hover:bg-red-600 transition-colors">تأكيد الحذف</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(confirmModal);
+            confirmModal.querySelector('#confirm-ok').onclick = () => {
+                onConfirm();
+                document.body.removeChild(confirmModal);
+            };
+            confirmModal.querySelector('#confirm-cancel').onclick = () => {
+                document.body.removeChild(confirmModal);
+            };
         };
 
         const updateReadingProgressDebounced = debounce(() => {
@@ -633,55 +773,103 @@
             }
             readFilesDB.updateProgress(state.currentReadFileId, topVisibleIndex);
         }, 1000);
-
-        function init() {
-            setTimeout(() => { dom.splashScreen.classList.add('hidden'); }, 2500);
-            
-            Object.values(modals).forEach(modal => modal.init?.());
-            
+        
+        function initEventListeners() {
             document.addEventListener('click', (e) => {
-                if (modals.wordPopup.element && !modals.wordPopup.element.classList.contains('hidden') && !modals.wordPopup.element.contains(e.target) && !e.target.closest('.cursor-pointer')) {
+                if (!dom.wordPopup.classList.contains('hidden') && !dom.wordPopup.contains(e.target) && !e.target.closest('.word-span')) {
                     modals.wordPopup.hide();
+                }
+                if (e.target === dom.modalOverlay) {
+                    modals['saved-words'].hide();
+                    modals['read-files'].hide();
+                    modals['font-style'].hide();
+                }
+            });
+
+            dom.textContainer.addEventListener('click', async (e) => {
+                const wordSpan = e.target.closest('.word-span');
+                if (wordSpan) {
+                    debouncedShowWordPopup(wordSpan.textContent.trim());
+                    return;
+                }
+
+                const translateBtn = e.target.closest('button[data-sentence]');
+                if (translateBtn && !translateBtn.disabled) {
+                    const sentence = translateBtn.dataset.sentence;
+                    const sourceLang = detectLanguage(sentence);
+                    const targetLang = sourceLang === 'ar' ? 'en' : 'ar';
+                    const outputDiv = translateBtn.nextElementSibling;
+                    if (outputDiv.classList.toggle('hidden')) return;
+                    translateBtn.disabled = true;
+                    translateBtn.innerHTML = `<span class="local-loader"></span> <span>جاري الترجمة...</span>`;
+                    const translation = await translateText(sentence, targetLang, sourceLang);
+                    if (targetLang === 'ar') {
+                        outputDiv.dir = 'rtl';
+                        outputDiv.classList.add('text-right', 'text-justify');
+                    } else {
+                        outputDiv.dir = 'ltr';
+                        outputDiv.classList.remove('text-right', 'text-justify');
+                    }
+                    outputDiv.textContent = translation;
+                    translateBtn.disabled = false;
+                    translateBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 5h12M9 3v2m4 13-4-4M19 17v-2a4 4 0 00-4-4H9M19 17h-2a4 4 0 00-4 4v2M19 17a4 4 0 01-4 4h-2" /></svg> <span>ترجمة الجملة</span>`;
+                    return;
+                }
+
+                const bookmarkBtn = e.target.closest('.bookmark-icon');
+                if (bookmarkBtn) {
+                     if (!state.currentUser) { showToast('سجل الدخول لحفظ الإشارات المرجعية'); return; }
+                    const pIndex = parseInt(bookmarkBtn.dataset.paragraphIndex, 10);
+                    const existing = state.currentBookmarks.find(b => b.paragraphIndex === pIndex);
+                    showLoader();
+                    if (existing) {
+                        await bookmarksDB.delete(existing.id);
+                        state.currentBookmarks = state.currentBookmarks.filter(b => b.id !== existing.id);
+                        bookmarkBtn.classList.remove('active');
+                        showToast('تم حذف العلامة المرجعية');
+                    } else {
+                        const snippet = document.getElementById(`p-${pIndex}`).textContent.slice(0, 150);
+                        const bookmark = { fileId: state.currentReadFileId, paragraphIndex: pIndex, snippet };
+                        const id = await bookmarksDB.save(bookmark);
+                        if (id) {
+                            bookmark.id = id;
+                            state.currentBookmarks.push(bookmark);
+                            bookmarkBtn.classList.add('active');
+                            showToast('تم إضافة العلامة المرجعية');
+                        } else {
+                            showToast('فشل في حفظ العلامة المرجعية');
+                        }
+                    }
+                    hideLoader();
+                    return;
                 }
             });
 
             dom.textContainer.addEventListener('input', () => {
-                if (state.currentReadFileId !== null) return;
-                if (Object.values(state.activeTools).every(v => !v)) {
-                    const currentText = dom.textContainer.innerText;
-                    const detectedLang = detectLanguage(currentText);
-                    state.currentLang = detectedLang;
-                    if (detectedLang === 'ar') {
-                        state.originalText = currentText;
-                        state.translatedText = '';
-                    } else {
-                        state.translatedText = currentText;
-                        state.originalText = '';
-                    }
-                    dom.textContainer.dir = state.currentLang === 'ar' ? 'rtl' : 'ltr';
-                }
+                if (state.currentReadFileId !== null || Object.values(state.activeTools).some(v => v)) return;
+                const currentText = dom.textContainer.innerText;
+                const detectedLang = detectLanguage(currentText);
+                state.currentLang = detectedLang;
+                dom.textContainer.dir = detectedLang === 'ar' ? 'rtl' : 'ltr';
+                if (detectedLang === 'ar') state.originalText = currentText;
+                else state.translatedText = currentText;
             });
             
             dom.textContainer.addEventListener('scroll', updateReadingProgressDebounced);
+            
             dom.toolsToggleBtn.addEventListener('click', toggleToolsMenu);
             
-            dom.toolItems.forEach(item => {
-                item.addEventListener('click', (e) => {
-                    if (dom.toolsToggleBtn.disabled) {
-                        e.preventDefault();
-                        showToast('الرجاء تسجيل الدخول أولاً.');
-                        return;
-                    }
-                    if (item.tagName.toLowerCase() === 'a') {
-                        e.preventDefault();
-                        activateTool(item.dataset.tool);
-                    }
-                    else if (item.tagName.toLowerCase() === 'label') {
-                        if (state.isToolsMenuOpen) {
-                            toggleToolsMenu();
-                        }
-                    }
-                });
+            dom.toolsMenuGrid.addEventListener('click', (e) => {
+                const item = e.target.closest('.tool-item');
+                if (!item) return;
+                if (item.tagName.toLowerCase() === 'div') {
+                    e.preventDefault();
+                    if (dom.toolsToggleBtn.disabled) { showToast('الرجاء تسجيل الدخول أولاً.'); return; }
+                    activateTool(item.dataset.tool);
+                } 
+                else if (item.tagName.toLowerCase() === 'label') {
+                    if (state.isToolsMenuOpen) { toggleToolsMenu(); }
+                }
             });
 
             dom.txtImporter.addEventListener('change', async (event) => {
@@ -703,13 +891,51 @@
                 reader.readAsText(file);
                 event.target.value = '';
             });
+            
+            dom.pdfImporter.addEventListener('change', async (event) => {
+                if (!state.currentUser) { showToast('يجب تسجيل الدخول لاستيراد وحفظ الملفات.'); event.target.value = ''; return; }
+                const file = event.target.files[0];
+                if (!file) return;
+                showLoader();
+                try {
+                    const arrayBuffer = await file.arrayBuffer();
+                    const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+                    const pdf = await loadingTask.promise;
+                    let fullText = '';
+                    for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+                        const page = await pdf.getPage(pageNum);
+                        const content = await page.getTextContent();
+                        const pageText = content.items.map(i => i.str).join(' ');
+                        fullText += pageText + '\n\n';
+                    }
+                    const txtFileName = file.name.replace(/\.pdf$/i, '.txt');
+                    const newFileId = await readFilesDB.save(txtFileName, fullText);
+                    if (newFileId) {
+                        state.currentReadFileId = newFileId;
+                        renderText(fullText);
+                        showToast('تم تحويل PDF إلى نص وحفظه');
+                    }
+                } catch (error) {
+                    console.error('خطأ في تحويل PDF:', error);
+                    showToast('حدث خطأ في تحويل ملف PDF');
+                } finally {
+                    hideLoader();
+                    event.target.value = '';
+                }
+            });
+        }
 
+        function init() {
+            populateToolsMenu();
+            initEventListeners();
             renderAuthState();
             render();
+            appIsReady = true;
+            tryHideSplashScreen();
         }
         
         init();
-    };
+    });
     </script>
 </body>
 </html>
