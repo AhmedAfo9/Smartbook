@@ -286,12 +286,12 @@
             originalText: "",
             translatedText: "",
             currentLang: 'ar',
-            activeTools: { 'translate-words': false, 'translate-paragraphs': false },
+            activeTools: { 'translate-words': false, 'translate-paragraphs': false, 'bionic-reading': false },
             isToolsMenuOpen: false,
             currentUser: null,
             currentReadFileId: null,
             activeBookmark: null,
-            savedWords: [], // NEW: Store full word objects
+            savedWords: [],
             selectedAccent: 'en-GB',
         };
         
@@ -326,9 +326,20 @@
         const debounce = (func, delay) => { let timeout; return (...args) => { clearTimeout(timeout); timeout = setTimeout(() => func(...args), delay); }; };
         const splitIntoSentences = (text) => !text ? [] : text.replace(/([.?!])\s*(?=[A-Z\u0600-\u06FF])/g, "$1|").split("|").map(s => s.trim()).filter(s => s);
         
+        // --- BIONIC READING FUNCTION ---
+        const applyBionicReading = (text) => {
+            return text.split(/(\s+)/).map(word => {
+                if (word.trim().length === 0) return word;
+                const len = word.length;
+                const boldCount = Math.ceil(len / 2);
+                return `<b>${word.substring(0, boldCount)}</b>${word.substring(boldCount)}`;
+            }).join('');
+        };
+
         // --- TOOLS DATA & POPULATION ---
         const toolsData = [
             { id: 'translate-words', name: 'ترجمة الكلمات', icon: `<path stroke-linecap="round" stroke-linejoin="round" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 002-2v-1a2 2 0 012-2h1.945M7.881 4.102A5.25 5.25 0 0112 3c2.757 0 5.093 2.054 5.25 4.757m-10.5 0A5.25 5.25 0 0012 21c2.757 0 5.093-2.054 5.25-4.757m-10.5 0h10.5" />` },
+            { id: 'bionic-reading', name: 'قراءة بيونية', icon: `<path stroke-linecap="round" stroke-linejoin="round" d="M3.75 4.5h16.5M3.75 6.75h16.5M3.75 9h16.5M3.75 11.25h16.5M3.75 13.5h16.5M3.75 15.75h16.5M3.75 18h16.5M3.75 20.25h16.5" />` },
             { id: 'translate-paragraphs', name: 'ترجمة الفقرات', icon: `<path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75" />` },
             { id: 'font-style', name: 'نمط الخط', icon: `<path stroke-linecap="round" stroke-linejoin="round" d="M9.528 1.718a.75.75 0 01.162.819A8.97 8.97 0 009 6a9 9 0 009 9 8.97 8.97 0 003.463-.69a.75.75 0 01.981.981A10.503 10.503 0 0112 22.5a10.5 10.5 0 01-10.5-10.5c0-1.77.42-3.44 1.172-4.995a.75.75 0 01.819-.162z" /><path stroke-linecap="round" stroke-linejoin="round" d="M12 2.25a.75.75 0 01.75.75v10.5a.75.75 0 01-1.5 0V3a.75.75 0 01.75-.75z" />` },
             { id: 'saved-words', name: 'الكلمات المضافة', icon: `<path stroke-linecap="round" stroke-linejoin="round" d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.5 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0111.186 0z" />` },
@@ -392,7 +403,7 @@
             state.currentLang = detectedLang;
             state.originalText = (detectedLang === 'ar') ? text : "";
             state.translatedText = (detectedLang === 'en') ? text : "";
-            state.activeTools = { 'translate-words': false, 'translate-paragraphs': false };
+            state.activeTools = { 'translate-words': false, 'translate-paragraphs': false, 'bionic-reading': false };
             
             state.activeBookmark = state.currentReadFileId ? await bookmarksDB.getByFile(state.currentReadFileId) : null;
             
@@ -459,7 +470,7 @@
                 state.translatedText = "";
                 state.currentLang = 'ar';
                 state.currentReadFileId = null;
-                state.activeTools = { 'translate-words': false, 'translate-paragraphs': false };
+                state.activeTools = { 'translate-words': false, 'translate-paragraphs': false, 'bionic-reading': false };
                 state.activeBookmark = null;
                 state.savedWords = [];
                 if (state.isToolsMenuOpen) toggleToolsMenu();
@@ -472,7 +483,7 @@
         function activateTool(toolName) {
             toggleToolsMenu();
             const modalTools = ['saved-words', 'quiz', 'read-files', 'font-style']; 
-            const textTools = ['translate-words', 'translate-paragraphs'];
+            const textTools = ['translate-words', 'translate-paragraphs', 'bionic-reading'];
 
             if (modalTools.includes(toolName)) {
                 modals[toolName]?.show();
@@ -495,7 +506,7 @@
             const textToRender = state.currentLang === 'ar' ? state.originalText : state.translatedText;
             if (!textToRender.trim()) {
                 showToast("لا يوجد نص لتطبيق الأداة عليه.");
-                state.activeTools = { 'translate-words': false, 'translate-paragraphs': false };
+                state.activeTools = { 'translate-words': false, 'translate-paragraphs': false, 'bionic-reading': false };
                 render();
                 return;
             }
@@ -521,24 +532,26 @@
                 const pElem = document.createElement('p');
                 pElem.className = 'inline';
                 
-                if (state.activeTools['translate-words']) {
-                    sentenceText.split(/(\s+)/).forEach(word => {
-                        const cleanWord = word.trim().toLowerCase().replace(/[.,!?\"]/g, '');
-                        if (cleanWord) {
-                            const span = document.createElement('span');
-                            span.textContent = word;
-                            span.className = 'word-span cursor-pointer hover:bg-teal-100 rounded px-1';
-                            if (savedWordsLowerCase.includes(cleanWord)) {
-                                span.classList.add('saved-word-highlight');
-                            }
-                            pElem.appendChild(span);
-                        } else {
-                            pElem.appendChild(document.createTextNode(word));
+                let finalHtml = '';
+                sentenceText.split(/(\s+)/).forEach(word => {
+                    const cleanWord = word.trim().toLowerCase().replace(/[.,!?\"]/g, '');
+                    if (cleanWord) {
+                        let wordHtml = word;
+                        if (state.activeTools['bionic-reading']) {
+                            wordHtml = applyBionicReading(word);
                         }
-                    });
-                } else {
-                    pElem.textContent = sentenceText;
-                }
+                        
+                        if (state.activeTools['translate-words']) {
+                            const isSaved = savedWordsLowerCase.includes(cleanWord);
+                            finalHtml += `<span class="word-span cursor-pointer hover:bg-teal-100 rounded px-1 ${isSaved ? 'saved-word-highlight' : ''}">${wordHtml}</span>`;
+                        } else {
+                            finalHtml += wordHtml;
+                        }
+                    } else {
+                        finalHtml += word; // Append whitespace
+                    }
+                });
+                pElem.innerHTML = finalHtml;
                 
                 pWrap.appendChild(icon);
                 pWrap.appendChild(pElem);
@@ -624,8 +637,8 @@
                     
                     const wordToSpeak = sourceLang === 'en' ? word : translation;
                     const wordToSave = sourceLang === 'en' ? word : translation;
-                    const isSaved = state.savedWords.some(w => w.word.toLowerCase() === wordToSave.toLowerCase());
-
+                    const existingWord = state.savedWords.find(w => w.word.toLowerCase() === wordToSave.toLowerCase());
+                    
                     dom.wordPopup.innerHTML = `
                         <div class="modal-glass rounded-2xl p-4 w-full max-w-md mx-auto slide-up-fade">
                             <div class="flex justify-between items-start gap-4">
@@ -636,8 +649,8 @@
                                 </div>
                                 <!-- Save Button -->
                                 <div class="flex-shrink-0">
-                                    <button id="toggle-save-btn" title="${isSaved ? 'إزالة الحفظ' : 'حفظ الكلمة'}" class="w-12 h-12 flex items-center justify-center rounded-full transition-all duration-200 ${!state.currentUser ? 'bg-slate-200 text-slate-400 cursor-not-allowed' : (isSaved ? 'bg-yellow-400 text-white hover:bg-yellow-500' : 'bg-teal-600 text-white hover:bg-teal-700')}">
-                                        ${isSaved ? 
+                                    <button id="toggle-save-btn" title="${existingWord ? 'إزالة الحفظ' : 'حفظ الكلمة'}" class="w-12 h-12 flex items-center justify-center rounded-full transition-all duration-200 ${!state.currentUser ? 'bg-slate-200 text-slate-400 cursor-not-allowed' : (existingWord ? 'bg-yellow-400 text-white hover:bg-yellow-500' : 'bg-teal-600 text-white hover:bg-teal-700')}">
+                                        ${existingWord ? 
                                             `<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>` : 
                                             `<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" /></svg>`
                                         }
@@ -676,8 +689,7 @@
                         if (!state.currentUser) { showToast('يجب تسجيل الدخول'); return; }
                         
                         const wordData = { word: wordToSave, translation, pos };
-                        const existingWord = state.savedWords.find(w => w.word.toLowerCase() === wordToSave.toLowerCase());
-
+                        
                         if (existingWord) {
                             await savedWordsDB.delete(existingWord.id);
                             showToast(`تم حذف "${wordToSave}"`);
@@ -811,10 +823,10 @@
                     const type = Math.random() < 0.5 ? 'en_to_ar' : 'ar_to_en';
                     let question, correctAnswer, choices;
                     if (type === 'en_to_ar' && questionData.word) {
-                        question = questionData.word; correctAnswer = questionData.translation;
+                        question = questionData.word; correctAnswer = questionData.translation.split(',')[0].trim();
                         choices = this.generateChoices(allWords, 'translation', correctAnswer, questionData.word);
                     } else {
-                        question = questionData.translation; correctAnswer = questionData.word;
+                        question = questionData.translation.split(',')[0].trim(); correctAnswer = questionData.word;
                         choices = this.generateChoices(allWords, 'word', correctAnswer, questionData.translation);
                     }
                     this.element.innerHTML = `<div class="w-full max-w-2xl mx-auto flex-1 flex flex-col py-4 bounce-in"><div class="flex justify-between items-center mb-4 flex-shrink-0"><h2 class="text-xl font-bold text-slate-700">اختبار الكلمات</h2><button id="close-quiz-btn" class="text-slate-500 hover:text-slate-800 text-4xl font-light">&times;</button></div><div class="modal-glass rounded-2xl shadow-lg p-6 sm:p-8 flex-1 flex flex-col justify-center"><div class="text-center mb-8"><p class="text-slate-500 mb-2 font-medium">ما هي ترجمة الكلمة التالية؟</p><h3 class="text-4xl sm:text-5xl font-extrabold text-teal-600">${question}</h3></div><div class="grid grid-cols-1 sm:grid-cols-2 gap-4">${choices.map(c => `<button class="quiz-choice-btn p-4 bg-slate-100 rounded-lg text-lg font-semibold hover:bg-teal-100 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-teal-400 focus:ring-offset-2 transition-all">${c}</button>`).join('')}</div></div><div class="text-center mt-4 text-lg font-semibold text-slate-500 flex-shrink-0">${this.state.current + 1} / ${this.state.questions.length}</div></div>`;
@@ -823,9 +835,9 @@
                 },
                 generateChoices: function(allWords, field, correctAnswer, sourceWord) {
                      let choices = [correctAnswer];
-                     let wrongAnswers = allWords.filter(w => w[field] !== correctAnswer && w.word !== sourceWord && w.translation !== sourceWord);
+                     let wrongAnswers = allWords.filter(w => w[field].split(',')[0].trim() !== correctAnswer && w.word !== sourceWord && w.translation !== sourceWord);
                      wrongAnswers = shuffleArray(wrongAnswers);
-                     for (let i = 0; i < Math.min(3, wrongAnswers.length); i++) { choices.push(wrongAnswers[i][field]); }
+                     for (let i = 0; i < Math.min(3, wrongAnswers.length); i++) { choices.push(wrongAnswers[i][field].split(',')[0].trim()); }
                      while (choices.length < 4) { choices.push(`خيار وهمي ${choices.length}`); }
                      return shuffleArray(choices);
                 },
